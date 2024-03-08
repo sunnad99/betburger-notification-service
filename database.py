@@ -3,9 +3,17 @@ import sqlite3
 
 class Database:
     def __init__(self, db_file="bets.db"):
-        self.conn = sqlite3.connect(db_file)
+        self.db_file = db_file
+
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.db_file)
         self.cursor = self.conn.cursor()
         self.create_table()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cursor.close()
+        self.conn.close()
 
     def create_table(self):
         self.cursor.execute(
@@ -36,7 +44,6 @@ class Database:
         self.conn.commit()
 
     def insert_data(self, data):
-
         self.cursor.executemany(
             """
             INSERT INTO bets (
@@ -75,7 +82,6 @@ class Database:
         self.conn.commit()
 
     def get_data(self, ids, last_modified_time):
-
         self.cursor.execute(
             """
             SELECT * FROM bets
@@ -94,7 +100,3 @@ class Database:
         """
         )
         return self.cursor.fetchall()
-
-    def close_connection(self):
-        self.cursor.close()
-        self.conn.close()
