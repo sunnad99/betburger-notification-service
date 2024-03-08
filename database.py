@@ -10,7 +10,7 @@ class Database:
     def create_table(self):
         self.cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS data (
+            CREATE TABLE IF NOT EXISTS bets (
                 id TEXT PRIMARY KEY,
                 market_and_bet_type INTEGER,
                 bookmaker_event_id INTEGER,
@@ -35,65 +35,27 @@ class Database:
         )
         self.conn.commit()
 
-    def insert_data(
-        self,
-        id,
-        market_and_bet_type,
-        bookmaker_event_id,
-        bookmaker_id,
-        league,
-        event_name,
-        home,
-        away,
-        swap_teams,
-        started_at,
-        koef_last_modified_at,
-        bookmaker_event_direct_link,
-        koef,
-        avg_koef,
-        percent,
-        min_koef,
-        bet_url,
-        bet_info,
-        receive_date,
-    ):
-        self.cursor.execute(
+    def insert_data(self, data):
+
+        self.cursor.executemany(
             """
-            INSERT OR IGNORE INTO data (
+            INSERT INTO bets (
                 id, market_and_bet_type, bookmaker_event_id, bookmaker_id, league, event_name, home, away,
                 swap_teams, started_at, koef_last_modified_at, bookmaker_event_direct_link, koef, avg_koef,
                 percent, min_koef, bet_url, bet_info, receive_date
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (:id, :market_and_bet_type, :bookmaker_event_id, :bookmaker_id, :league, :event_name, :home, :away,
+                :swap_teams, :started_at, :koef_last_modified_at, :bookmaker_event_direct_link, :koef, :avg_koef,
+                :percent, :min_koef, :bet_url, :bet_info, :receive_date)
         """,
-            (
-                id,
-                market_and_bet_type,
-                bookmaker_event_id,
-                bookmaker_id,
-                league,
-                event_name,
-                home,
-                away,
-                swap_teams,
-                started_at,
-                koef_last_modified_at,
-                bookmaker_event_direct_link,
-                koef,
-                avg_koef,
-                percent,
-                min_koef,
-                bet_url,
-                bet_info,
-                receive_date,
-            ),
+            data,
         )
         self.conn.commit()
 
     def update_data(self, id, koef_last_modified_at, new_data):
         self.cursor.execute(
             """
-            UPDATE data
+            UPDATE bets
             SET koef_last_modified_at = ?,
                 -- Update other columns here
             WHERE id = ?
@@ -105,7 +67,7 @@ class Database:
     def delete_data(self, id):
         self.cursor.execute(
             """
-            DELETE FROM data
+            DELETE FROM bets
             WHERE id = ?
         """,
             (id,),
@@ -115,7 +77,7 @@ class Database:
     def get_data(self, id):
         self.cursor.execute(
             """
-            SELECT * FROM data
+            SELECT * FROM bets
             WHERE id = ?
         """,
             (id,),
@@ -125,7 +87,7 @@ class Database:
     def get_all_data(self):
         self.cursor.execute(
             """
-            SELECT * FROM data
+            SELECT * FROM bets
         """
         )
         return self.cursor.fetchall()
