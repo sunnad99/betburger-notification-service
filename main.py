@@ -1,5 +1,4 @@
 import time
-import pandas as pd
 from config import BASE_MESSAGE, TIME_ZONE
 from credentials import (
     BET_BURGER_TOKEN,
