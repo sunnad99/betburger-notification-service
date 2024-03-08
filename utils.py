@@ -237,10 +237,9 @@ def format_messages(best_bets_df, base_message, time_zone):
         cur_msg = base_message
         bet_group = df.to_dict(orient="records")
 
+        raw_time = pd.to_datetime(bet_group[0]["started_at"])
         event_time = (
-            pytz.utc.localize(bet_group[0]["started_at"])
-            .astimezone(time_zone)
-            .strftime("%A %H:%M")
+            pytz.utc.localize(raw_time).astimezone(time_zone).strftime("%A %H:%M")
         )
 
         messages_to_send.append(
