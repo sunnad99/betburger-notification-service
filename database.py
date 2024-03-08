@@ -19,7 +19,7 @@ class Database:
         self.cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS bets (
-                id TEXT PRIMARY KEY,
+                id TEXT,
                 market_and_bet_type INTEGER,
                 bookmaker_event_id INTEGER,
                 bookmaker_id INTEGER,
