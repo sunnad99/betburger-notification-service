@@ -246,9 +246,7 @@ def format_messages(best_bets_df, base_message, time_zone):
             cur_msg.format(
                 league_name=bet_group[0]["league"],
                 event_name=bet_group[0]["event_name"],
-                bets="\n\t".join(
-                    [f"- {bet['bet_info']} (1u per game)" for bet in bet_group]
-                ),
+                bets="\n\t".join([f"- {bet['bet_info']} (1u)" for bet in bet_group]),
                 min_odds=" & ".join(
                     [str(round(min_odd["min_koef"], 1)) for min_odd in bet_group]
                 ),
@@ -308,7 +306,3 @@ async def send_messages_with_retry(
         count += 1
 
     await asyncio.gather(*futures)
-
-
-# Usage example:
-# asyncio.run(send_messages_with_retry(token, chat_id, messages))
