@@ -1,18 +1,17 @@
 import time
-from config import BASE_MESSAGE, TIME_ZONE
-from credentials import (
-    BET_BURGER_TOKEN,
-    BET_BURGER_FILTER_ID,
-    TELEGRAM_TOKEN,
-    TELEGRAM_CHAT_ID,
-)
-from utils import process_bets, format_messages, send_message, load_duplicate_records
-from database import Database
-import time
 import logging
-from config import BASE_MESSAGE, TIME_ZONE
-from utils import process_bets, format_messages, send_message, load_duplicate_records
+import schedule
+
 from database import Database
+from config import BASE_MESSAGE, TIME_ZONE, FREQUENCY_MINUTES
+from utils import (
+    process_bets,
+    format_messages,
+    load_duplicate_records,
+    send_message,
+)
+import asyncio
+
 
 from credentials import (
     BET_BURGER_TOKEN,
@@ -26,43 +25,57 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Initialize the database
-db = Database()
-logging.info("Database initialized")
 
-# Obtain the bets from BetBurger
-bets = process_bets(BET_BURGER_TOKEN, BET_BURGER_FILTER_ID)
+def main():
 
-# Check if there are any bets retrieved from the API
-if not bets.empty:
-    logging.info(f"{len(bets)} Bets retrieved from the API")
+    # Connect to the database
+    with Database() as db:
 
-    # Retrieve duplicate records, if they exist, from the database
-    new_bets = load_duplicate_records(bets, db)
+        # Obtain the bets from BetBurger
+        bets = process_bets(BET_BURGER_TOKEN, BET_BURGER_FILTER_ID)
 
-    # Only if there are new bets, insert them into the database and send the messages to the Telegram channel
-    if new_bets:
-        logging.info("New bets found")
+        # Check if there are any bets retrieved from the API
+        if not bets.empty:
+            print(bets.id)
+            logging.info(f"{len(bets)} Bets retrieved from the API")
 
-        # Insert the new bets into the database
-        db.insert_data(new_bets)
-        logging.info(f"{len(new_bets)} New bets inserted into the database")
+            # Retrieve duplicate records, if they exist, from the database
+            new_bets = load_duplicate_records(bets, db)
 
-        # Format the bets into messages
-        messages = format_messages(bets, BASE_MESSAGE, TIME_ZONE)
-        logging.info(
-            f"Formatted about {len(messages)} messages to be sent to the Telegram channel"
-        )
+            # Only if there are new bets, insert them into the database and send the messages to the Telegram channel
+            if new_bets:
+                logging.info("New bets found")
 
-        # Send the messages to the Telegram channel
-        for message in messages:
-            send_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
-            time.sleep(3)
+                # Insert the new bets into the database
+                db.insert_data(new_bets)
+                logging.info(f"{len(new_bets)} New bets inserted into the database")
 
-        logging.info(f"Sent all messages to Telegram channel")
-    else:
-        logging.warning(
-            "Duplicate records retrieved from the database...skipping the process"
-        )
-else:
-    logging.warning("No bets retrieved from the API...skipping the process")
+                # Format the bets into messages
+                messages = format_messages(bets, BASE_MESSAGE, TIME_ZONE)
+                logging.info(
+                    f"Formatted about {len(messages)} messages to be sent to the Telegram channel"
+                )
+
+                # Send the messages to the Telegram channel
+                for message in messages:
+                    send_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
+                    time.sleep(3)
+
+                logging.info(f"Sent {len(messages)} messages to Telegram channel")
+            else:
+                logging.warning(
+                    "Duplicate records retrieved from the database...skipping the process"
+                )
+        else:
+            logging.warning("No bets retrieved from the API...skipping the process")
+
+
+if __name__ == "__main__":
+
+    # Schedule the task to run every FREQUENCY_MINUTES
+    schedule.every(FREQUENCY_MINUTES).minutes.do(main)
+
+    # Run the scheduler in the background
+    while True:
+        schedule.run_pending()
+        time.sleep(1)  # Sleep for 1 second to avoid high CPU usage
