@@ -1,5 +1,6 @@
 import asyncio
 import time
+import datetime
 import pytz
 import requests
 import pandas as pd
@@ -181,13 +182,14 @@ def process_bets(token, filter, per_page=500):
 
     best_bets_df = best_bets_df.drop(
         [
-            "id",
             "bet_id",
             "outcome_name",
             "market_and_bet_type_param",
         ],
         axis=1,
     )
+
+    best_bets_df["receive_date"] = datetime.datetime.utcnow()
 
     return best_bets_df
 
