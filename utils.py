@@ -197,6 +197,40 @@ def process_bets(token, filter, per_page=500):
     return best_bets_df
 
 
+def filter_new_bets(api_bets, db_bets):
+
+    new_bets = []
+    # Filter the records that are not in the database and insert them
+
+    ids_to_insert = set(api_bets.id) - set(db_bets.id)
+    new_bets_df = api_bets[api_bets.id.isin(ids_to_insert)]
+
+    new_bets = new_bets_df.to_dict(orient="records")
+    return new_bets
+
+
+def load_duplicate_records(bets, db):
+
+    records_to_read = bets[["id", "koef_last_modified_at"]].to_dict("list")
+    ids, last_modify_times = tuple(records_to_read["id"]), tuple(
+        records_to_read["koef_last_modified_at"]
+    )
+
+    ids_str = str(ids) if len(ids) > 1 else f"({ids[0]})"
+    last_modified_time_str = (
+        str(last_modify_times)
+        if len(last_modify_times) > 1
+        else f"('{last_modify_times[0]}')"
+    )
+
+    filtered_db_records = db.get_data(ids_str, last_modified_time_str)
+    filtered_db_df = pd.DataFrame(filtered_db_records, columns=bets.columns)
+
+    new_bets = filter_new_bets(bets, filtered_db_df)
+
+    return new_bets
+
+
 def format_messages(best_bets_df, base_message, time_zone):
     messages_to_send = []
     for i, df in best_bets_df.groupby(["bookmaker_event_id", "market_and_bet_type"]):
