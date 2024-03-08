@@ -29,7 +29,7 @@ class Database:
                 min_koef REAL,
                 bet_url TEXT,
                 bet_info TEXT,
-                receiveDate TEXT
+                receive_date TEXT
             )
         """
         )
@@ -55,14 +55,14 @@ class Database:
         min_koef,
         bet_url,
         bet_info,
-        receiveDate,
+        receive_date,
     ):
         self.cursor.execute(
             """
             INSERT OR IGNORE INTO data (
                 id, market_and_bet_type, bookmaker_event_id, bookmaker_id, league, event_name, home, away,
                 swap_teams, started_at, koef_last_modified_at, bookmaker_event_direct_link, koef, avg_koef,
-                percent, min_koef, bet_url, bet_info, receiveDate
+                percent, min_koef, bet_url, bet_info, receive_date
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
@@ -85,7 +85,7 @@ class Database:
                 min_koef,
                 bet_url,
                 bet_info,
-                receiveDate,
+                receive_date,
             ),
         )
         self.conn.commit()
