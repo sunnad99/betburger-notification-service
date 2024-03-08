@@ -135,9 +135,7 @@ def process_bets(token, filter, per_page=500):
     best_bets_df = best_bets_df[~best_bets_df.avg_koef.isna()]
 
     # Adding the minimum coefficient for the bet
-    best_bets_df["min_koef"] = (best_bets_df["koef"] * MIN_ODDS_FACTOR).apply(
-        round, args=(1,)
-    )
+    best_bets_df["min_koef"] = best_bets_df["koef"] * MIN_ODDS_FACTOR
 
     # Obtaining the bet information through the mapping
     best_bets_df["outcome_name"] = (
@@ -191,6 +189,11 @@ def process_bets(token, filter, per_page=500):
 
     best_bets_df["receive_date"] = datetime.datetime.utcnow()
 
+    # Converting the columns to the correct data types to be stored in the database
+    best_bets_df = best_bets_df.astype(
+        {"receive_date": str, "started_at": str, "koef_last_modified_at": str}
+    )
+
     return best_bets_df
 
 
@@ -213,7 +216,9 @@ def format_messages(best_bets_df, base_message, time_zone):
                 bets="\n\t".join(
                     [f"- {bet['bet_info']} (1u per game)" for bet in bet_group]
                 ),
-                min_odds=" & ".join([str(x["min_koef"]) for x in bet_group]),
+                min_odds=" & ".join(
+                    [str(round(min_odd["min_koef"], 1)) for min_odd in bet_group]
+                ),
                 match_time=event_time,
                 bet_url=bet_group[0]["bet_url"],
             )
