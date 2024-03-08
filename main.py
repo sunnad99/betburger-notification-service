@@ -1,4 +1,5 @@
 import time
+import pandas as pd
 from config import BASE_MESSAGE, TIME_ZONE
 from credentials import (
     BET_BURGER_TOKEN,
@@ -6,7 +7,7 @@ from credentials import (
     TELEGRAM_TOKEN,
     TELEGRAM_CHAT_ID,
 )
-from utils import process_bets, format_messages, send_message
+from utils import process_bets, format_messages, send_message, load_duplicate_records
 from database import Database
 
 # Initialize the database
@@ -15,17 +16,22 @@ db = Database()
 # Obtain the bets from BetBurger
 bets = process_bets(BET_BURGER_TOKEN, BET_BURGER_FILTER_ID)
 
-# Check if there are any bets to send
+# Check if there are any bets retrieved from the API
 if not bets.empty:
 
-    # Store the bets in the database
+    # Retrieve duplicate records, if they exist, from the database
+    new_bets = load_duplicate_records(bets, db)
 
-    # Format the bets into messages
-    messages = format_messages(bets, BASE_MESSAGE, TIME_ZONE)
+    # Only if there are new bets, insert them into the database and send the messages to the Telegram channel
+    if new_bets:
 
-    print(messages)
+        # Insert the new bets into the database
+        db.insert_data(new_bets)
 
-    # # Send the messages to the Telegram channel
-    # for message in messages:
-    #     send_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
-    #     time.sleep(3)
+        # Format the bets into messages
+        messages = format_messages(bets, BASE_MESSAGE, TIME_ZONE)
+
+        # Send the messages to the Telegram channel
+        for message in messages:
+            send_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
+            time.sleep(3)
