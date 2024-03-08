@@ -209,10 +209,7 @@ def format_messages(best_bets_df, base_message, time_zone):
                 league_name=bet_group[0]["league"],
                 event_name=bet_group[0]["event_name"],
                 bets="\n\t".join(
-                    [
-                        f"- {bet['bet_info']} ({round(bet['percent'])}u)"
-                        for bet in bet_group
-                    ]
+                    [f"- {bet['bet_info']} (1u per game)" for bet in bet_group]
                 ),
                 min_odds=" & ".join([str(x["min_koef"]) for x in bet_group]),
                 match_time=event_time,
