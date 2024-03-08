@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from config import URL_MAPPING, MIN_ODDS_PERCENTAGE
+from config import URL_MAPPING, MIN_ODDS_FACTOR
 
 
 def make_request(url, headers=None, params=None, data=None, method="GET"):
@@ -134,7 +134,7 @@ def process_bets(token, filter, per_page=500):
     best_bets_df = best_bets_df[~best_bets_df.avg_koef.isna()]
 
     # Adding the minimum coefficient for the bet
-    best_bets_df["min_koef"] = (best_bets_df["koef"] * MIN_ODDS_PERCENTAGE).apply(
+    best_bets_df["min_koef"] = (best_bets_df["koef"] * MIN_ODDS_FACTOR).apply(
         round, args=(1,)
     )
 
