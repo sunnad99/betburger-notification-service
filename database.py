@@ -74,15 +74,18 @@ class Database:
         )
         self.conn.commit()
 
-    def get_data(self, id):
+    def get_data(self, ids, last_modified_time):
+
         self.cursor.execute(
             """
             SELECT * FROM bets
-            WHERE id = ?
-        """,
-            (id,),
+            WHERE id IN {ids}
+            AND koef_last_modified_at IN {last_modified_time}
+        """.format(
+                ids=ids, last_modified_time=last_modified_time
+            )
         )
-        return self.cursor.fetchone()
+        return self.cursor.fetchall()
 
     def get_all_data(self):
         self.cursor.execute(
