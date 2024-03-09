@@ -9,6 +9,8 @@ FREQUENCY_SECONDS = 100
 TIME_ZONE = pytz.timezone("Europe/Stockholm")
 
 BASE_MESSAGE = """
+Nytt Spel!
+
 ⚽️ {event_name}
 🎲 Bets
 {bets}
