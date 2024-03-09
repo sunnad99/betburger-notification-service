@@ -216,7 +216,7 @@ def load_duplicate_records(bets, db):
         records_to_read["koef_last_modified_at"]
     )
 
-    ids_str = str(ids) if len(ids) > 1 else f"({ids[0]})"
+    ids_str = str(ids) if len(ids) > 1 else f"('{ids[0]}')"
     last_modified_time_str = (
         str(last_modify_times)
         if len(last_modify_times) > 1
