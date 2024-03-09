@@ -3,7 +3,7 @@ import logging
 import schedule
 
 from database import Database
-from config import BASE_MESSAGE, TIME_ZONE, FREQUENCY_MINUTES
+from config import BASE_MESSAGE, TIME_ZONE, FREQUENCY_SECONDS
 from utils import (
     process_bets,
     format_messages,
@@ -73,7 +73,7 @@ def main():
 if __name__ == "__main__":
 
     # Schedule the task to run every FREQUENCY_MINUTES
-    schedule.every(FREQUENCY_MINUTES).minutes.do(main)
+    schedule.every(FREQUENCY_SECONDS).seconds.do(main)
 
     # Run the scheduler in the background
     while True:
