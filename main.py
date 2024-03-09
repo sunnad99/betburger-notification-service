@@ -36,7 +36,7 @@ def main():
 
         # Check if there are any bets retrieved from the API
         if not bets.empty:
-            print(bets.id)
+            print(list(bets.id))
             logging.info(f"{len(bets)} Bets retrieved from the API")
 
             # Retrieve duplicate records, if they exist, from the database
