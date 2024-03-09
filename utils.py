@@ -7,6 +7,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from config import URL_MAPPING, MIN_ODDS_FACTOR
+from flags import FLAGS
 
 
 def make_request(url, headers=None, params=None, data=None, method="GET"):
@@ -223,6 +224,18 @@ def load_duplicate_records(bets, db):
     return new_bets
 
 
+def get_flag_by_name(name):
+
+    retrieved_flag = list(
+        filter(lambda flag_data: flag_data["name"].lower() == name.lower(), FLAGS)
+    )
+
+    if retrieved_flag:
+        return retrieved_flag[0]["emoji"]
+
+    return "🇪🇺"
+
+
 def format_messages(best_bets_df, base_message, time_zone):
     messages_to_send = []
     for i, df in best_bets_df.groupby(["bookmaker_event_id", "market_and_bet_type"]):
@@ -234,9 +247,18 @@ def format_messages(best_bets_df, base_message, time_zone):
             pytz.utc.localize(raw_time).astimezone(time_zone).strftime("%A %H:%M")
         )
 
+        league_info = bet_group[0]["league"].split(".")
+        country_name, league_name = league_info[0], league_info[-1].strip()
+
+        # If the league name is not found, then there is no country name
+        if len(league_info) < 2:
+            country_name = ""
+
+        flag = get_flag_by_name(country_name)
+
         messages_to_send.append(
             cur_msg.format(
-                league_name=bet_group[0]["league"],
+                league_name=f"{flag} {league_name}",
                 event_name=bet_group[0]["event_name"],
                 bets="\n\t".join([f"- {bet['bet_info']} (1u)" for bet in bet_group]),
                 min_odds=" & ".join(
@@ -246,8 +268,6 @@ def format_messages(best_bets_df, base_message, time_zone):
                 bet_url=bet_group[0]["bet_url"],
             )
         )
-
-        print(messages_to_send[-1])
 
     return messages_to_send
 
