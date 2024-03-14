@@ -3,7 +3,7 @@ import logging
 import schedule
 
 from database import Database
-from config import BASE_MESSAGE, TIME_ZONE, FREQUENCY_SECONDS
+from config import BASE_MESSAGE, SPORT_EMOJI_MAPPING, TIME_ZONE, FREQUENCY_SECONDS
 from utils import (
     process_bets_with_retry,
     format_messages,
@@ -49,14 +49,18 @@ def main():
 
                 for sport_id, sport_bets_df in new_bets_df.groupby("sport_id"):
 
-                    chat_id = TELEGRAM_CHAT_MAPPING.get(str(sport_id))
+                    sport_id_str = str(sport_id)
+                    sport_emoji = SPORT_EMOJI_MAPPING.get(sport_id_str, "")
+                    chat_id = TELEGRAM_CHAT_MAPPING.get(sport_id_str)
 
                     # If the chat_id is not found, don't send the bet
                     if not chat_id:
                         continue
 
                     # Format the bets into messages
-                    messages = format_messages(sport_bets_df, BASE_MESSAGE, TIME_ZONE)
+                    messages = format_messages(
+                        sport_bets_df, BASE_MESSAGE, TIME_ZONE, sport_emoji
+                    )
                     logging.info(
                         f"Formatted about {len(messages)} messages for sport id {sport_id}"
                     )

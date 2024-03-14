@@ -23,10 +23,16 @@ PYTHON_TO_SQLITE_DTYPE_MAPPING = {
     np.dtype("datetime64[ns]"): "TEXT",
 }
 
+SPORT_EMOJI_MAPPING = {
+    "5": "🤾",
+    "7": "⚽",
+    "8": "🎾",
+}
+
 BASE_MESSAGE = """
 Nytt Spel!
 
-⚽️ {event_name}
+{sport_emoji} {event_name}
 🎲 Bets
 {bets}
 

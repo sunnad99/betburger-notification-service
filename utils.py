@@ -277,7 +277,7 @@ def get_flag_by_name(name):
     return "🇪🇺"
 
 
-def format_messages(best_bets_df, base_message, time_zone):
+def format_messages(best_bets_df, base_message, time_zone, sport_emoji):
     messages_to_send = []
     for i, df in best_bets_df.groupby(["bookmaker_event_id", "market_and_bet_type"]):
         cur_msg = base_message
@@ -300,6 +300,7 @@ def format_messages(best_bets_df, base_message, time_zone):
         messages_to_send.append(
             cur_msg.format(
                 league_name=f"{flag} {league_name}",
+                sport_emoji=sport_emoji,
                 event_name=bet_group[0]["event_name"],
                 bets="\n\t".join([f"- {bet['bet_info']} (1u)" for bet in bet_group]),
                 min_odds=" & ".join(
