@@ -1,5 +1,6 @@
 import asyncio
 import time
+import sqlite3
 import logging
 import datetime
 import pytz
@@ -7,7 +8,7 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from config import URL_MAPPING, MIN_ODDS_FACTOR
+from config import URL_MAPPING, MIN_ODDS_FACTOR, PYTHON_TO_SQLITE_DTYPE_MAPPING
 from flags import FLAGS
 
 from requests.exceptions import RequestException
@@ -139,6 +140,7 @@ def process_bets(token, filter, per_page=500):
                 "event_name",
                 "home",
                 "away",
+                "sport_id",
                 "swap_teams",
                 "started_at",
                 "koef_last_modified_at",
@@ -244,6 +246,23 @@ def load_duplicate_records(bets, db):
     new_bets_df = filter_new_bets(bets, filtered_db_df)
 
     return new_bets_df
+
+
+def insert_new_bets(db, new_bets_df, new_bets):
+    try:
+        # Insert the new bets into the database
+        db.insert_data(new_bets)
+    except sqlite3.OperationalError as e:
+        column_name = str(e).split(" ")[-1]
+        column_dtype = new_bets_df.dtypes[column_name]
+        logging.warning(
+            f"There was a difficulty inserting the new bets into the database...adding column {column_name} and retrying"
+        )
+
+        sqlite_dtype = PYTHON_TO_SQLITE_DTYPE_MAPPING.get(column_dtype, "TEXT")
+        # Add the missing column to the database and try to insert the new bets again
+        db.add_columns(column_name, sqlite_dtype)
+        db.insert_data(new_bets)
 
 
 def get_flag_by_name(name):
