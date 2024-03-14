@@ -319,7 +319,6 @@ def send_message(token, chat_id, message):
     params = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
     response = make_request(url, params=params, method="POST")
 
-    print(response.text)
     return response.json()
 
 

@@ -5,24 +5,19 @@ import schedule
 from database import Database
 from config import BASE_MESSAGE, TIME_ZONE, FREQUENCY_SECONDS
 from utils import (
-    process_bets,
+    process_bets_with_retry,
     format_messages,
     load_duplicate_records,
+    insert_new_bets,
     send_message,
 )
-import asyncio
 
 
 from credentials import (
     BET_BURGER_TOKEN,
     BET_BURGER_FILTER_ID,
     TELEGRAM_TOKEN,
-    TELEGRAM_CHAT_ID,
-)
-
-# Initialize the logger
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    TELEGRAM_CHAT_MAPPING,
 )
 
 
@@ -31,8 +26,7 @@ def main():
     # Connect to the database
     with Database() as db:
 
-        # Obtain the bets from BetBurger
-        bets = process_bets(BET_BURGER_TOKEN, BET_BURGER_FILTER_ID)
+        bets = process_bets_with_retry(BET_BURGER_TOKEN, BET_BURGER_FILTER_ID)
 
         # Check if there are any bets retrieved from the API
         if not bets.empty:
@@ -40,28 +34,42 @@ def main():
             logging.info(f"{len(bets)} Bets retrieved from the API")
 
             # Retrieve duplicate records, if they exist, from the database
-            new_bets = load_duplicate_records(bets, db)
+            new_bets_df = load_duplicate_records(bets, db)
 
             # Only if there are new bets, insert them into the database and send the messages to the Telegram channel
-            if new_bets:
+            if not new_bets_df.empty:
+                # Define the mapping between pandas dtypes and SQLite3 dtypes
+
                 logging.info("New bets found")
+                new_bets = new_bets_df.to_dict("records")
 
                 # Insert the new bets into the database
-                db.insert_data(new_bets)
+                insert_new_bets(db, new_bets_df, new_bets)
                 logging.info(f"{len(new_bets)} New bets inserted into the database")
 
-                # Format the bets into messages
-                messages = format_messages(bets, BASE_MESSAGE, TIME_ZONE)
-                logging.info(
-                    f"Formatted about {len(messages)} messages to be sent to the Telegram channel"
-                )
+                for sport_id, sport_bets_df in new_bets_df.groupby("sport_id"):
 
-                # Send the messages to the Telegram channel
-                for message in messages:
-                    send_message(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, message)
-                    time.sleep(3)
+                    chat_id = TELEGRAM_CHAT_MAPPING.get(str(sport_id))
 
-                logging.info(f"Sent {len(messages)} messages to Telegram channel")
+                    # If the chat_id is not found, don't send the bet
+                    if not chat_id:
+                        continue
+
+                    # Format the bets into messages
+                    messages = format_messages(sport_bets_df, BASE_MESSAGE, TIME_ZONE)
+                    logging.info(
+                        f"Formatted about {len(messages)} messages for sport id {sport_id}"
+                    )
+
+                    # Send the messages to the Telegram channel
+                    for message in messages:
+
+                        send_message(TELEGRAM_TOKEN, chat_id, message)
+                        time.sleep(3)
+
+                    logging.info(
+                        f"Sent {len(messages)} messages to the Telegram channel with id {chat_id}"
+                    )
             else:
                 logging.warning(
                     "Duplicate records retrieved from the database...skipping the process"
