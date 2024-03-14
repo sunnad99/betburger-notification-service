@@ -37,7 +37,8 @@ class Database:
                 min_koef REAL,
                 bet_url TEXT,
                 bet_info TEXT,
-                receive_date TEXT
+                receive_date TEXT,
+                sport_id INTEGER
             )
         """
         )
@@ -49,13 +50,23 @@ class Database:
             INSERT INTO bets (
                 id, market_and_bet_type, bookmaker_event_id, bookmaker_id, league, event_name, home, away,
                 swap_teams, started_at, koef_last_modified_at, bookmaker_event_direct_link, koef, avg_koef,
-                percent, min_koef, bet_url, bet_info, receive_date
+                percent, min_koef, bet_url, bet_info, receive_date, sport_id
             )
             VALUES (:id, :market_and_bet_type, :bookmaker_event_id, :bookmaker_id, :league, :event_name, :home, :away,
                 :swap_teams, :started_at, :koef_last_modified_at, :bookmaker_event_direct_link, :koef, :avg_koef,
-                :percent, :min_koef, :bet_url, :bet_info, :receive_date)
+                :percent, :min_koef, :bet_url, :bet_info, :receive_date, :sport_id)
         """,
             data,
+        )
+        self.conn.commit()
+
+    def add_columns(self, column_name, data_type):
+        self.cursor.execute(
+            """
+            ALTER TABLE bets ADD COLUMN {column_name} {data_type}
+        """.format(
+                column_name=column_name, data_type=data_type
+            )
         )
         self.conn.commit()
 
