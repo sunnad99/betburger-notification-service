@@ -1,5 +1,6 @@
 import pytz
 import logging
+import numpy as np
 
 # Initialize the logger
 logging.basicConfig(
@@ -13,6 +14,14 @@ FREQUENCY_SECONDS = 100
 
 
 TIME_ZONE = pytz.timezone("Europe/Stockholm")
+
+PYTHON_TO_SQLITE_DTYPE_MAPPING = {
+    np.dtype("int64"): "INTEGER",
+    np.dtype("float64"): "REAL",
+    np.dtype("object"): "TEXT",
+    np.dtype("bool"): "INTEGER",
+    np.dtype("datetime64[ns]"): "TEXT",
+}
 
 BASE_MESSAGE = """
 Nytt Spel!
