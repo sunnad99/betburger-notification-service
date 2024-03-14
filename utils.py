@@ -1,5 +1,6 @@
 import asyncio
 import time
+import logging
 import datetime
 import pytz
 import requests
@@ -8,6 +9,8 @@ from bs4 import BeautifulSoup
 
 from config import URL_MAPPING, MIN_ODDS_FACTOR
 from flags import FLAGS
+
+from requests.exceptions import RequestException
 
 
 def make_request(url, headers=None, params=None, data=None, method="GET"):
@@ -75,6 +78,27 @@ def get_betting_mapping():
         print(f"Failed to retrieve the content. Status code: {response.status_code}")
 
     return bet_mappings
+
+
+# Obtain the bets from BetBurger
+def process_bets_with_retry(token, filter_id):
+    retries = 3
+    delay = 2
+
+    for i in range(retries):
+        try:
+            bets = process_bets(token, filter_id)
+            return bets
+        except RequestException as e:
+            logging.error(f"Error retrieving bets: {e}")
+            if i < retries - 1:
+                logging.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logging.error("Failed to retrieve bets after multiple retries")
+                raise
+
+    return pd.DataFrame()
 
 
 def process_bets(token, filter, per_page=500):
@@ -206,22 +230,20 @@ def filter_new_bets(api_bets, db_bets):
     ids_to_insert = set(api_bets.id) - set(db_bets.id)
     new_bets_df = api_bets[api_bets.id.isin(ids_to_insert)]
 
-    new_bets = new_bets_df.to_dict(orient="records")
-    return new_bets
+    return new_bets_df
 
 
 def load_duplicate_records(bets, db):
 
     ids = tuple(bets.id)
-
     ids_str = str(ids) if len(ids) > 1 else f"('{ids[0]}')"
 
     filtered_db_records = db.get_data(ids_str)
     filtered_db_df = pd.DataFrame(filtered_db_records, columns=bets.columns)
 
-    new_bets = filter_new_bets(bets, filtered_db_df)
+    new_bets_df = filter_new_bets(bets, filtered_db_df)
 
-    return new_bets
+    return new_bets_df
 
 
 def get_flag_by_name(name):
