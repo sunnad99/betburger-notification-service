@@ -4,3 +4,4 @@ requests==2.31.0
 beautifulsoup4==4.12.3
 schedule==1.2.1
 python-telegram-bot[ext]
+stripe==8.8.0
