@@ -1,0 +1,124 @@
+import sqlite3
+
+# Create a logger object from the logging library
+import logging
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+
+DB_NAME = "bets.db"
+
+
+def create_table_customers() -> None:
+    """Create table customers in database bets"""
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            """--sql
+            CREATE TABLE IF NOT EXISTS customers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            telegram_user_id TEXT,
+            telegram_chat_id TEXT,
+            telegram_temp_payment_message_id TEXT,
+            customer_id TEXT
+            );
+            """
+        )
+        conn.commit()
+        logger.success("[+] Table customers created successfully")
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+
+
+def create_table_products() -> None:
+    table_name = "products"
+    f"""Create table {table_name} in database bets"""
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""--sql
+            CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            product_id TEXT,
+            quantity INTEGER,
+            payment_link TEXT
+            );
+            """
+        )
+        conn.commit()
+        logger.success(f"[+] Table {table_name} created successfully")
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+
+
+def create_table_price() -> None:
+    table_name = "price"
+    f"""Create table {table_name} in database bets"""
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""--sql
+            CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            price_id TEXT,
+            price REAL,
+            currency TEXT
+            );
+            """
+        )
+        conn.commit()
+        logger.success(f"[+] Table {table_name} created successfully")
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+
+
+def create_table_subscriptions() -> None:
+    table_name = "subscriptions"
+    f"""Create table {table_name} in database bets"""
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""--sql
+            CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subscription_first_date TEXT,
+            subscription_start_date TEXT,
+            subscription_expiry_date TEXT,
+            customer_id REFERENCES customers(id) ON UPDATE CASCADE ON DELETE CASCADE,
+            product_id REFERENCES products(id) ON UPDATE CASCADE ON DELETE CASCADE,
+            price_id REFERENCES price(id) ON UPDATE CASCADE ON DELETE CASCADE
+            );
+            """
+        )
+        conn.commit()
+        logger.success(f"[+] Table {table_name} created successfully")
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+
+
+if __name__ == "__main__":
+    create_table_customers()
+
+    create_table_products()
+
+    create_table_price()
+
+    create_table_subscriptions()
