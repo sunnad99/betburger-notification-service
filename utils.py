@@ -12,20 +12,12 @@ from flags import FLAGS
 
 def make_request(url, headers=None, params=None, data=None, method="GET"):
 
-    try:
-        response = requests.request(
-            method, url, headers=headers, params=params, data=data
-        )
-        # If the response was successful, no Exception will be raised
-        response.raise_for_status()
-    except requests.RequestException as e:
-        # If the request failed, print the error message
-        print(f"Request failed: {e}")
-        return None
+    response = requests.request(method, url, headers=headers, params=params, data=data)
 
     return response
 
 
+# TODO: Update this function to use the requests library
 def get_betting_mapping():
 
     bet_mappings = {}
@@ -77,6 +69,7 @@ def get_betting_mapping():
     return bet_mappings
 
 
+# TODO: Update this function to use the requests library
 def process_bets(token, filter, per_page=500):
 
     url = "https://rest-api-pr.betburger.com/api/v1/valuebets/bot_pro_search"
@@ -278,8 +271,12 @@ def send_message(token, chat_id, message):
     params = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
     response = make_request(url, params=params, method="POST")
 
-    print(response.text)
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    elif response.status_code == 429:
+        raise Exception("Rate limit exceeded...will have to retry")
+
+    return None
 
 
 async def send_message_with_retry(
