@@ -7,7 +7,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-DB_NAME = "bets.db"
+DB_NAME = "payments.db"
 
 
 def create_table_customers() -> None:
