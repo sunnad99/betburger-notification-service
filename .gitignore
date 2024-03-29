@@ -1,3 +1,6 @@
 *.ipynb
 *.pyc
 .env
+miscellaneous/*
+bot_*_config.json
+*.db
