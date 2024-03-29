@@ -29,7 +29,7 @@ def create_table_customers() -> None:
             """
         )
         conn.commit()
-        logger.success("[+] Table customers created successfully")
+        logger.info("[+] Table customers created successfully")
 
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
@@ -54,7 +54,7 @@ def create_table_products() -> None:
             """
         )
         conn.commit()
-        logger.success(f"[+] Table {table_name} created successfully")
+        logger.info(f"[+] Table {table_name} created successfully")
 
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
@@ -79,7 +79,7 @@ def create_table_price() -> None:
             """
         )
         conn.commit()
-        logger.success(f"[+] Table {table_name} created successfully")
+        logger.info(f"[+] Table {table_name} created successfully")
 
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
@@ -106,7 +106,7 @@ def create_table_subscriptions() -> None:
             """
         )
         conn.commit()
-        logger.success(f"[+] Table {table_name} created successfully")
+        logger.info(f"[+] Table {table_name} created successfully")
 
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
