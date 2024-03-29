@@ -11,14 +11,15 @@ DB_NAME = "bets.db"
 
 
 def create_table_customers() -> None:
-    """Create table customers in database bets"""
+    table_name = "customers"
+    f"""Create table {table_name} in database bets"""
 
     try:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(
-            """--sql
-            CREATE TABLE IF NOT EXISTS customers (
+            f"""--sql
+            CREATE TABLE IF NOT EXISTS {table_name} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             telegram_user_id TEXT,
@@ -29,7 +30,7 @@ def create_table_customers() -> None:
             """
         )
         conn.commit()
-        logger.info("[+] Table customers created successfully")
+        logger.info(f"[+] Table {table_name} created successfully")
 
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
