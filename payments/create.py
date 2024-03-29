@@ -1,6 +1,4 @@
 import sqlite3
-
-# Create a logger object from the logging library
 import logging
 
 logging.basicConfig(
@@ -26,7 +24,7 @@ def create_table_customers() -> None:
             telegram_user_id TEXT,
             telegram_chat_id TEXT,
             telegram_temp_payment_message_id TEXT,
-            customer_id TEXT
+            stripe_customer_id TEXT
             );
             """
         )
@@ -49,7 +47,7 @@ def create_table_products() -> None:
             CREATE TABLE IF NOT EXISTS {table_name} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
-            product_id TEXT,
+            stripe_product_id TEXT,
             quantity INTEGER,
             payment_link TEXT
             );
@@ -74,7 +72,7 @@ def create_table_price() -> None:
             CREATE TABLE IF NOT EXISTS {table_name} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
-            price_id TEXT,
+            stripe_price_id TEXT,
             price REAL,
             currency TEXT
             );
