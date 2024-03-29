@@ -60,6 +60,30 @@ def create_table_products() -> None:
         logger.error(f"[-] {error}")
 
 
+def create_table_groups() -> None:
+    table_name = "groups"
+    f"""Create table {table_name} in database bets"""
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""--sql
+            CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            telegram_group_id TEXT,
+            product_id REFERENCES products(id) ON UPDATE CASCADE ON DELETE CASCADE
+            );
+            """
+        )
+        conn.commit()
+        logger.info(f"[+] Table {table_name} created successfully")
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+
+
 def create_table_price() -> None:
     table_name = "price"
     f"""Create table {table_name} in database bets"""
@@ -116,6 +140,8 @@ if __name__ == "__main__":
     create_table_customers()
 
     create_table_products()
+
+    create_table_groups()
 
     create_table_price()
 
