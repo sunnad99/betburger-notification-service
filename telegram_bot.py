@@ -1,16 +1,26 @@
 import logging
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice
+import datetime
+import selector
+import update as updater
+
+from telegram import (
+    Update,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    WebAppInfo,
+)
 from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
-    PreCheckoutQueryHandler,
     filters,
 )
 
-from credentials import TELEGRAM_TOKEN, PAYMENT_PROVIDER_TOKEN
+from credentials import TELEGRAM_TOKEN
+from add_stripe_details import create_customer
+
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -19,20 +29,100 @@ logging.basicConfig(
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    # TODO: The callback_data for each of the buttons needs to be meaningful for the
-    keyboard = [
+    products = selector.get_products()
+
+    # If there are no products, tell the user that there are no products available
+    if not products:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="No products available at the moment.",
+        )
+        return
+
+    options = [
         [
-            InlineKeyboardButton("Subscribe to Unibet", callback_data="unibet"),
-        ],
-        [
-            InlineKeyboardButton("Subscribe to Bet365", callback_data="bet365"),
-        ],
+            InlineKeyboardButton(
+                f"Subscribe to {product['name'].title()}",
+                callback_data=product["stripe_product_id"],
+            )
+        ]
+        for product in products
     ]
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="I'm a bot, please talk to me!",  # TODO: This text needs to be replaced with the actual text for the betting bot
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=InlineKeyboardMarkup(options),
+    )
+
+
+async def handle_subscription(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Sends an invoice without shipping-payment."""
+
+    query = update.callback_query
+    user_id = query.from_user.id
+    chat_id = query.message.chat_id
+    message_id = query.message.message_id
+    user_full_name = query.from_user.full_name
+    stripe_product_id = query.data
+
+    selected_product = selector.get_products(stripe_product_id=stripe_product_id)[0]
+    product_id = selected_product["id"]
+    customers = selector.get_customers(telegram_user_id=user_id)
+    if customers:
+
+        existing_customer = customers[0]
+        # Check if the customer has an active subscription
+        customer_id = existing_customer["id"]
+        subscriptions = selector.get_subscriptions(
+            customer_id=customer_id, product_id=product_id
+        )
+        if subscriptions:
+            # Check if the subscription is still active
+            existing_subscription = subscriptions[0]
+            expiry_date = existing_subscription["subscription_expiry_date"]
+
+            # If the subscription has not expired, do not create a new subscription
+            if expiry_date <= datetime.datetime.now(datetime.UTC):
+
+                await query.answer()
+                await query.edit_message_text(
+                    text="You already have an active subscription for this product..."
+                )
+                return
+
+    else:
+        customer = {
+            "name": user_full_name,
+            "telegram_user_id": user_id,
+            "telegram_chat_id": chat_id,
+            "telegram_temp_payment_message_id": message_id,
+        }
+
+        create_customer(customer_info=customer)
+
+        customers = [customer]
+
+    # Update the temporary payment message ID for the customer
+    updater.update_temp_payment_message_id(
+        telegram_user_id=user_id, temp_payment_message_id=message_id
+    )
+
+    await query.answer()
+    await query.edit_message_text(
+        text="Please proceed with the payment by clicking the button below.",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        text="Pay now",
+                        web_app=WebAppInfo(selected_product["payment_link"]),
+                    )
+                ],
+            ]
+        ),
     )
 
 
@@ -43,98 +133,19 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text(text=f"Selected option: {query.data}")
-
-
-async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Displays info on how to use the bot."""
-    msg = (
-        "Use /shipping to get an invoice for shipping-payment, or /noshipping for an "
-        "invoice without shipping."
-    )
-
-    await update.message.reply_text(msg)
-
-
-async def start_without_shipping_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    """Sends an invoice without shipping-payment."""
-    chat_id = update.message.chat_id
-    title = "Payment Example"
-    description = "Payment Example using python-telegram-bot"
-    # select a payload just for you to recognize its the donation from your bot
-    payload = "Custom-Payload"
-    # In order to get a provider_token see https://core.telegram.org/bots/payments#getting-a-token
-    currency = "USD"
-    # price in dollars
-    price = 1
-    # price * 100 so as to include 2 decimal points
-    prices = [LabeledPrice("Test", price * 100)]
-
-    # optionally pass need_name=True, need_phone_number=True,
-    # need_email=True, need_shipping_address=True, is_flexible=True
-    await context.bot.send_invoice(
-        chat_id, title, description, payload, PAYMENT_PROVIDER_TOKEN, currency, prices
-    )
-
-
-# after (optional) shipping, it's the pre-checkout
-async def precheckout_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    """Answers the PreQecheckoutQuery"""
-    query = update.pre_checkout_query
-    # check the payload, is this from your bot?
-    if query.invoice_payload != "Custom-Payload":
-        # answer False pre_checkout_query
-        await query.answer(ok=False, error_message="Something went wrong...")
-    else:
-        await query.answer(ok=True)
-
-
-# finally, after contacting the payment provider...
-async def successful_payment_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    """Confirms the successful payment."""
-    # do something after successfully receiving payment?
-
-    # TODO: Before sending a message, store the user_id and the payment_id in a database
-
-    await update.message.reply_text(
-        "Thank you for your payment!"
-    )  # TODO: Send a message that provides the personalized link to the correct betting group
-
-
 if __name__ == "__main__":
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    # start_handler = CommandHandler("start", start)
+    start_handler = CommandHandler("start", start)
     unknown_handler = MessageHandler(filters.COMMAND, unknown)
-    no_shipping_handler = CommandHandler("noshipping", start_without_shipping_callback)
-    precheckout_query_handler = PreCheckoutQueryHandler(precheckout_callback)
-    succesful_payment_handler = MessageHandler(
-        filters.SUCCESSFUL_PAYMENT, successful_payment_callback
-    )
-    # application.add_handler(start_handler)
-
-    application.add_handler(CallbackQueryHandler(button))
 
     # simple start function
-    application.add_handler(CommandHandler("start", start_callback))
+    application.add_handler(start_handler)
 
-    # Payment without shipping handler
-    application.add_handler(no_shipping_handler)
-
-    # Pre-checkout handler to final check
-    application.add_handler(precheckout_query_handler)
-
-    # Success! Notify your user!
-    application.add_handler(succesful_payment_handler)
+    # Payment without shipping handler for a specific item
+    application.add_handler(
+        CallbackQueryHandler(handle_subscription, pattern=r"^prod_.*$")
+    )
 
     # unknown command handler
     application.add_handler(unknown_handler)
