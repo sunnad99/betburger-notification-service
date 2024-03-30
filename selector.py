@@ -131,6 +131,52 @@ def create_prices(prices: list[dict]) -> None:
         conn.close()
 
 
+def create_subscriptions(subscriptions: list[dict]) -> None:
+    """
+    Create new subscriptions using an array of dictionaries
+
+    Args:
+        subscriptions: list[dict] - List of dictionaries containing subscription data
+
+    Returns:
+        None
+    """
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.executemany(
+            """
+            INSERT INTO subscriptions (
+                customer_id,
+                product_id,
+                price_id,
+                stripe_subscription_id,
+                subscription_first_date,
+                subscription_start_date,
+                subscription_expiry_date
+            )
+            VALUES (
+                :customer_id,
+                :product_id,
+                :price_id,
+                :stripe_subscription_id,
+                :subscription_first_date,
+                :subscription_start_date,
+                :subscription_expiry_date
+            )
+            """,
+            subscriptions,
+        )
+        conn.commit()
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def get_customers(
     telegram_user_id: str = None, stripe_customer_id: str = None
 ) -> list[dict] | bool:
