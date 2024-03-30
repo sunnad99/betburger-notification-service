@@ -40,6 +40,7 @@ def create_product(
     )
 
     price_id = product_data["default_price"]
+    product_id = product_data["id"]
 
     payment_link = stripe.PaymentLink.create(
         line_items=[{"price": price_id, "quantity": 1}],
@@ -48,13 +49,22 @@ def create_product(
     product = [
         {
             "name": name,
-            "stripe_product_id": product_data["id"],
+            "stripe_product_id": product_id,
             "quantity": 1,
             "payment_link": payment_link["url"],
         }
     ]
 
+    price = [
+        {
+            "stripe_price_id": price_id,
+            "price": unit_amount / 100,
+            "currency": currency,
+        }
+    ]
+
     selector.create_products(product)
+    selector.create_prices(price)
 
 
 def create_customer(customer_info):
