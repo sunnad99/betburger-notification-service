@@ -28,6 +28,16 @@ logging.basicConfig(
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Start function for the bot to start the subscription process
+
+    Args:
+        update: Update - The update object
+        context: ContextTypes.DEFAULT_TYPE - The context object
+
+    Returns:
+        None
+    """
 
     products = selector.get_products()
 
@@ -59,7 +69,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_subscription(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Sends an invoice without shipping-payment."""
+    """
+    Handle the subscription process for a product
+
+    Args:
+        update: Update - The update object
+        context: ContextTypes.DEFAULT_TYPE - The context object
+
+    Returns:
+        None
+    """
 
     query = update.callback_query
     user_id = query.from_user.id
@@ -102,8 +121,6 @@ async def handle_subscription(
         }
 
         create_customer(customer_info=customer)
-
-        customers = [customer]
 
     # Update the temporary payment message ID for the customer
     updater.update_temp_payment_message_id(
