@@ -124,6 +124,7 @@ def create_table_subscriptions() -> None:
             subscription_first_date TEXT,
             subscription_start_date TEXT,
             subscription_expiry_date TEXT,
+            stripe_subscription_id TEXT,
             customer_id REFERENCES customers(id) ON UPDATE CASCADE ON DELETE CASCADE,
             product_id REFERENCES products(id) ON UPDATE CASCADE ON DELETE CASCADE,
             price_id REFERENCES price(id) ON UPDATE CASCADE ON DELETE CASCADE
