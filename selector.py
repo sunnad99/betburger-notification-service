@@ -208,6 +208,46 @@ def get_products(
         conn.close()
 
 
+def get_prices(
+    product_id: str = None, stripe_price_id: str = None
+) -> list[dict] | bool:
+    """
+    Get prices from the database
+
+    Args:
+        product_id: str (Optional) - Product ID
+        stripe_price_id: str (Optional) - Stripe price ID
+
+    Returns:
+        list[dict] | bool - List of dictionaries containing price data or False if an error occurs
+    """
+
+    query = """--sql
+    SELECT * FROM prices
+    """
+
+    # If product_id is provided, get the price with that product_id
+    if product_id:
+        query += f" WHERE product_id = {product_id}"
+    elif stripe_price_id:
+        query += f" WHERE stripe_price_id = '{stripe_price_id}'"
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        return [
+            dict(zip([column[0] for column in cursor.description], row))
+            for row in cursor.fetchall()
+        ]
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def get_subscriptions(
     customer_id: int = None, product_id: int = None
 ) -> list[dict] | bool:
