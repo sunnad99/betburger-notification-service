@@ -108,13 +108,11 @@ def create_prices(prices: list[dict]) -> None:
             """
             INSERT INTO price (
                 stripe_price_id,
-                product_id,
                 unit_amount,
                 currency
             )
             VALUES (
                 :stripe_price_id,
-                :product_id,
                 :unit_amount,
                 :currency
             )
