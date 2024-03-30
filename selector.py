@@ -177,6 +177,44 @@ def create_subscriptions(subscriptions: list[dict]) -> None:
         conn.close()
 
 
+def create_groups(groups: list[dict]) -> None:
+    """
+    Create new groups using an array of dictionaries
+
+    Args:
+        groups: list[dict] - List of dictionaries containing group data
+
+    Returns:
+        None
+    """
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.executemany(
+            """
+            INSERT INTO groups (
+                name,
+                telegram_group_id,
+                product_id
+            )
+            VALUES (
+                :name,
+                :telegram_group_id,
+                :product_id
+            )
+            """,
+            groups,
+        )
+        conn.commit()
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def get_customers(
     telegram_user_id: str = None, stripe_customer_id: str = None
 ) -> list[dict] | bool:
