@@ -106,7 +106,7 @@ def create_prices(prices: list[dict]) -> None:
         cursor = conn.cursor()
         cursor.executemany(
             """
-            INSERT INTO prices (
+            INSERT INTO price (
                 stripe_price_id,
                 product_id,
                 unit_amount,
