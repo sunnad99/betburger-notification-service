@@ -4,7 +4,14 @@ from credentials import PAYMENT_PROVIDER_TOKEN
 
 
 def create_product(
-    name, description, currency, interval, interval_count, unit_amount, unit_label
+    name,
+    description,
+    currency,
+    interval,
+    interval_count,
+    unit_amount,
+    unit_label,
+    telegram_details=None,
 ):
     """
     Create a new product in Stripe and store the product information in the database
@@ -17,6 +24,7 @@ def create_product(
         interval_count: int - Interval count for the product
         unit_amount: int - Unit amount for the product
         unit_label: str - Unit label for the product
+        telegram_details: dict - Dictionary containing Telegram group details (group_name and group_id)
 
     Returns:
         None
@@ -65,6 +73,19 @@ def create_product(
 
     selector.create_products(product)
     selector.create_prices(price)
+
+    if telegram_details:
+
+        products = selector.get_products(stripe_product_id=product_id)[0]
+
+        group = [
+            {
+                "name": telegram_details["group_name"],
+                "telegram_group_id": telegram_details["group_id"],
+                "product_id": products["id"],
+            }
+        ]
+        selector.create_groups(group)
 
 
 def create_customer(customer_info):
