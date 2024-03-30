@@ -91,6 +91,46 @@ def create_products(products: list[dict]) -> None:
         conn.close()
 
 
+def create_prices(prices: list[dict]) -> None:
+    """
+    Create new prices using an array of dictionaries
+
+    Args:
+        prices: list[dict] - List of dictionaries containing price data
+
+    Returns:
+        None
+    """
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.executemany(
+            """
+            INSERT INTO prices (
+                stripe_price_id,
+                product_id,
+                unit_amount,
+                currency
+            )
+            VALUES (
+                :stripe_price_id,
+                :product_id,
+                :unit_amount,
+                :currency
+            )
+            """,
+            prices,
+        )
+        conn.commit()
+
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def get_customers(
     telegram_user_id: str = None, stripe_customer_id: str = None
 ) -> list[dict] | bool:
