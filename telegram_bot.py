@@ -1,12 +1,16 @@
 import logging
 import datetime
 import selector
+import json
 import update as updater
 
 from telegram import (
     Update,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardRemove,
     WebAppInfo,
 )
 from telegram.ext import (
@@ -118,7 +122,10 @@ async def handle_subscription(
             "telegram_user_id": user_id,
             "telegram_chat_id": chat_id,
             "telegram_temp_payment_message_id": message_id,
+            "stripe_customer_id": None,
         }
+
+        selector.create_customers(customer)
 
         create_customer(customer_info=customer)
 
@@ -127,15 +134,21 @@ async def handle_subscription(
         telegram_user_id=user_id, temp_payment_message_id=message_id
     )
 
-    await query.answer()
-    await query.edit_message_text(
+    # Load the payment link for the product
+    base_url = selector.get_base_url()
+
+    await query.delete_message()
+
+    await query.message.reply_text(
         text="Please proceed with the payment by clicking the button below.",
-        reply_markup=InlineKeyboardMarkup(
+        reply_markup=ReplyKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
+                    KeyboardButton(
                         text="Pay now",
-                        web_app=WebAppInfo(selected_product["payment_link"]),
+                        web_app=WebAppInfo(
+                            f"{base_url}/payment_link"
+                        ),  # TODO: Might pass the product_id here
                     )
                 ],
             ]
@@ -147,6 +160,18 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Sorry, I didn't understand that command.",
+    )
+
+
+async def payment_successful(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = json.loads(update.effective_message.web_app_data.data)
+    print(data)
+
+    # TODO: Form the personalized links for the user to join the groups
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"Received WebApp data: {data}",
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 
@@ -162,6 +187,11 @@ if __name__ == "__main__":
     # Payment without shipping handler for a specific item
     application.add_handler(
         CallbackQueryHandler(handle_subscription, pattern=r"^prod_.*$")
+    )
+
+    # Payment successful handler
+    application.add_handler(
+        MessageHandler(filters.StatusUpdate.WEB_APP_DATA, payment_successful)
     )
 
     # unknown command handler
