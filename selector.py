@@ -370,3 +370,23 @@ def get_subscriptions(
     finally:
         cursor.close()
         conn.close()
+
+
+def get_base_url():
+
+    SETTINGS_DB = "backend.db"
+    query = """--sql
+    SELECT value FROM settings WHERE name = "base_url"
+    """
+
+    try:
+        conn = sqlite3.connect(SETTINGS_DB)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        return cursor.fetchone()[0]
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
