@@ -305,7 +305,7 @@ def get_prices(
     """
 
     query = """--sql
-    SELECT * FROM prices
+    SELECT * FROM price
     """
 
     # If product_id is provided, get the price with that product_id
