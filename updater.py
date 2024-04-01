@@ -44,3 +44,37 @@ def update_temp_payment_message_id(
     finally:
         cursor.close()
         conn.close()
+
+
+def update_ngrok_url(base_url: str) -> None:
+
+    conn = sqlite3.connect("backend.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS settings (
+            id PRIMARY KEY,
+            name TEXT,
+            value TEXT
+            )
+        """
+    )
+
+    cursor.execute(
+        """
+        UPDATE settings
+        SET value = :ngrok_url
+        WHERE name = "base_url"
+        """,
+        {"ngrok_url": base_url},
+    )
+    if cursor.rowcount == 0:
+        cursor.execute(
+            """
+            INSERT INTO settings (name, value)
+            VALUES ("base_url", :ngrok_url)
+            """,
+            {"ngrok_url": base_url},
+        )
+    conn.commit()
