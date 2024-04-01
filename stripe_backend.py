@@ -30,6 +30,17 @@ templates = Jinja2Templates(directory=os.getenv("STATIC_DIR", "./"))
 app = FastAPI()
 
 
+@app.get("/payment_link", response_class=HTMLResponse)
+def payment_link(request: Request, price_id: str, customer_id: str = None):
+
+    # Construct the data to be passed to the template
+    data = {"price_id": price_id}
+    if customer_id:
+        data["customer_id"] = customer_id
+
+    return templates.TemplateResponse(request=request, name="stripe.html", context=data)
+
+
 @app.post("/payment_webhook")
 async def stripe_webhook(request: Request):
     payload = await request.body()
@@ -152,12 +163,6 @@ async def stripe_webhook(request: Request):
 def secret():
     intent = {}  # ... Create or retrieve the PaymentIntent
     return JSONResponse({"client_secret": intent.client_secret})
-
-
-@app.get("/payment_link", response_class=HTMLResponse)
-def payment_link(request: Request):
-
-    return templates.TemplateResponse(name="stripe.html", request=request)
 
 
 # Helper function to communicate ngrok URL to telegram bot
