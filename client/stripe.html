@@ -13,82 +13,48 @@
 
     <!-- Add hidden elements to store the price_id and customer_id without displaying them -->
     <div id="price_id" style="display: none;">{{price_id}}</div>
+    <div id="temp_message_id" style="display: none;">{{temp_message_id}}</div>
     {% if customer_id %}
     <div id="customer_id" style="display: none;">{{customer_id}}</div>
     {% endif %}
 
-    <h1>Subscription Payment</h1>
-    <form id="payment-form">
-        <div>
-            <label for="card-element">
-                Credit or debit card
-            </label>
-            <div id="card-element">
-                <!-- A Stripe Element will be inserted here. -->
-            </div>
-            <!-- Used to display form errors. -->
-            <div id="card-errors" role="alert"></div>
-        </div>
-        <button id="submit">
-            Pay
-        </button>
-    </form>
+    <script>
 
-    <script type="text/javascript">
-        Telegram.WebApp.ready();
-        // Set your publishable key
-        const publishableKey = "pk_test_51OyIs4Dvoc9trV896kbQUbY3f8u8cmHmwI4u5yVvkJjCO1sbt0PujfcBNnvcbPYR0UB4hqlzlwU1BzplpvCEkjwZ00Eg7mNjJ5";
-        var stripe = Stripe(publishableKey);
-        var elements = stripe.elements();
+        document.addEventListener("DOMContentLoaded", async () => {
 
-        // Create an instance of the card Element.
-        var card = elements.create('card');
+            const telegram_data = Telegram.WebApp.initDataUnsafe;
 
-        // Add an instance of the card Element into the `card-element` div.
-        card.mount('#card-element');
+            // Extract the query id and the user id
+            const { query_id, user } = telegram_data;
+            const { id } = user;
 
-        // Handle real-time validation errors from the card Element.
-        card.addEventListener('change', function (event) {
-            var displayError = document.getElementById('card-errors');
-            if (event.error) {
-                displayError.textContent = event.error.message;
-            } else {
-                displayError.textContent = '';
+            const { publishable_key } = await fetch("/stripe_config").then((r) => r.json());
+
+            var stripe = Stripe(publishable_key);
+
+            // Fetch the customer_id and price_id from html elements
+            const price_id = document.getElementById("price_id").textContent;
+            const customer_id =
+                document.getElementById("customer_id")?.textContent || null;
+            const temp_message_id = document.getElementById("temp_message_id").textContent;
+
+
+            let url = `/create_checkout_session?web_app_query_id=${query_id}&temp_message_id=${temp_message_id}&telegram_user_id=${id}&price_id=${price_id}`
+            if (customer_id) {
+                url += `&customer_id=${customer_id}`
             }
-        });
 
-        // Handle form submission.
-        var form = document.getElementById('payment-form');
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-            stripe.createToken(card).then(function (result) {
-                if (result.error) {
-                    // Inform the user if there was an error.
-                    var errorElement = document.getElementById('card-errors');
-                    errorElement.textContent = result.error.message;
-
-                    Telegram.WebApp.sendData({ message: result.error.message });
-                } else {
-                    // Send the token to your server to charge the user.
-                    stripeTokenHandler(result.token);
-                    Telegram.WebApp.sendData({ message: result.token.id });
+            const { session_id } = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
                 }
+            }).then((r) => r.json());
 
-
-                Telegram.WebApp.close();
-
-            });
-
-
+            stripe.redirectToCheckout({ sessionId: session_id });
         });
-
-        // Submit the form with the token ID.
-        function stripeTokenHandler(token) {
-            // You can send the token to your server to create a subscription
-            // Use fetch or another AJAX method to send the token to your server
-            console.log(token);
-        }
     </script>
+
 </body>
 
 </html>
