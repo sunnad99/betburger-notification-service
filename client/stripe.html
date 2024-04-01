@@ -11,6 +11,12 @@
 
 <body>
 
+    <!-- Add hidden elements to store the price_id and customer_id without displaying them -->
+    <div id="price_id" style="display: none;">{{price_id}}</div>
+    {% if customer_id %}
+    <div id="customer_id" style="display: none;">{{customer_id}}</div>
+    {% endif %}
+
     <h1>Subscription Payment</h1>
     <form id="payment-form">
         <div>
