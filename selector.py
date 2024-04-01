@@ -278,10 +278,10 @@ def get_products(
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(query)
-        return [
-            dict(zip([column[0] for column in cursor.description], row))
-            for row in cursor.fetchall()
-        ]
+        column_names = [column[0] for column in cursor.description]
+        fetched_data = [dict(zip(column_names, row)) for row in cursor.fetchall()]
+
+        return fetched_data
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
         return False
@@ -318,10 +318,10 @@ def get_prices(
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(query)
-        return [
-            dict(zip([column[0] for column in cursor.description], row))
-            for row in cursor.fetchall()
-        ]
+        column_names = [column[0] for column in cursor.description]
+        fetched_data = [dict(zip(column_names, row)) for row in cursor.fetchall()]
+
+        return fetched_data
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
         return False
@@ -360,10 +360,44 @@ def get_subscriptions(
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(query)
-        return [
-            dict(zip([column[0] for column in cursor.description], row))
-            for row in cursor.fetchall()
-        ]
+        column_names = [column[0] for column in cursor.description]
+        fetched_data = [dict(zip(column_names, row)) for row in cursor.fetchall()]
+
+        return fetched_data
+    except (Exception, sqlite3.DatabaseError) as error:
+        logger.error(f"[-] {error}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_groups(product_id: int = None) -> list[dict] | bool:
+    """
+    Get groups from the database
+
+    Args:
+        product_id: int - Product ID
+
+    Returns:
+        list[dict] | bool - List of dictionaries containing group data or False if an error occurs
+    """
+
+    query = """--sql
+    SELECT * FROM groups
+    """
+
+    if product_id:
+        query += f" WHERE product_id = {product_id}"
+
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        column_names = [column[0] for column in cursor.description]
+        fetched_data = [dict(zip(column_names, row)) for row in cursor.fetchall()]
+
+        return fetched_data
     except (Exception, sqlite3.DatabaseError) as error:
         logger.error(f"[-] {error}")
         return False
