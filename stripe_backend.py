@@ -29,6 +29,11 @@ templates = Jinja2Templates(directory=os.getenv("STATIC_DIR", "./"))
 app = FastAPI()
 
 
+@app.post("/stripe_config")
+def secret():
+    return JSONResponse({"publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY")})
+
+
 @app.get("/payment_link", response_class=HTMLResponse)
 def payment_link(request: Request, price_id: str, customer_id: str = None):
 
@@ -38,6 +43,28 @@ def payment_link(request: Request, price_id: str, customer_id: str = None):
         data["customer_id"] = customer_id
 
     return templates.TemplateResponse(request=request, name="stripe.html", context=data)
+
+
+@app.post("/create_checkout_session")
+def create_checkout_session(price_id: str, customer_id: str = None):
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price": price_id,
+                    "quantity": 1,
+                }
+            ],
+            mode="subscription",
+            success_url=os.getenv("SUCCESS_URL"),
+            cancel_url=os.getenv("CANCEL_URL"),
+            customer=customer_id if customer_id else "",
+        )
+
+        return JSONResponse({"session_id": checkout_session.id})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=403)
 
 
 @app.post("/payment_webhook")
@@ -156,11 +183,6 @@ async def stripe_webhook(request: Request):
         print("Unhandled event type {}".format(event.type))
 
     return JSONResponse(content={}, status_code=200)
-
-
-@app.post("/stripe_config")
-def secret():
-    return JSONResponse({"publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY")})
 
 
 # Helper function to communicate ngrok URL to telegram bot
