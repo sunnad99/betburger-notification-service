@@ -1,16 +1,12 @@
 import logging
 import datetime
 import selector
-import json
-import update as updater
+import updater
 
 from telegram import (
     Update,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardRemove,
     WebAppInfo,
 )
 from telegram.ext import (
@@ -53,15 +49,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    options = [
-        [
+    options = []
+    prices = selector.get_prices()
+    for product in products:
+        price = next(filter(lambda price: product["id"] == price["product_id"], prices))
+        button = [
             InlineKeyboardButton(
                 f"Subscribe to {product['name'].title()}",
-                callback_data=product["stripe_product_id"],
+                callback_data=price["stripe_price_id"],
             )
         ]
-        for product in products
-    ]
+        options.append(button)
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -86,14 +84,14 @@ async def handle_subscription(
 
     query = update.callback_query
     user_id = query.from_user.id
-    chat_id = query.message.chat_id
+    stripe_price_id = query.data
     message_id = query.message.message_id
-    user_full_name = query.from_user.full_name
-    stripe_product_id = query.data
 
-    selected_product = selector.get_products(stripe_product_id=stripe_product_id)[0]
-    product_id = selected_product["id"]
+    selected_price = selector.get_prices(stripe_price_id=stripe_price_id)[0]
+    selected_product = selector.get_products(product_id=selected_price["product_id"])[0]
     customers = selector.get_customers(telegram_user_id=user_id)
+
+    product_id = selected_product["id"]
     if customers:
 
         existing_customer = customers[0]
@@ -107,6 +105,7 @@ async def handle_subscription(
             existing_subscription = subscriptions[0]
             expiry_date = existing_subscription["subscription_expiry_date"]
 
+            # TODO: Fix this comparison to check if the subscription has expired
             # If the subscription has not expired, do not create a new subscription
             if expiry_date <= datetime.datetime.now(datetime.UTC):
 
@@ -116,41 +115,22 @@ async def handle_subscription(
                 )
                 return
 
-    else:
-        customer = {
-            "name": user_full_name,
-            "telegram_user_id": user_id,
-            "telegram_chat_id": chat_id,
-            "telegram_temp_payment_message_id": message_id,
-            "stripe_customer_id": None,
-        }
-
-        selector.create_customers(customer)
-
-        create_customer(customer_info=customer)
-
-    # Update the temporary payment message ID for the customer
-    updater.update_temp_payment_message_id(
-        telegram_user_id=user_id, temp_payment_message_id=message_id
-    )
-
     # Load the payment link for the backend and create a payment link
     base_url = selector.get_base_url()
-    payment_url = f"{base_url}/payment_link?price_id={product_id}"
+    stripe_price_id = selected_price["stripe_price_id"]
+    payment_url = f"{base_url}/payment_link?temp_message_id={message_id}&price_id={stripe_price_id}"
     if customers:
         payment_url += f"&customer_id={customers[0].get('stripe_customer_id')}"
 
-    await query.delete_message()
-    await query.message.reply_text(
-        text="Please proceed with the payment by clicking the button below.",
-        reply_markup=ReplyKeyboardMarkup(
+    await query.answer()
+    await query.edit_message_text(
+        text="Please proceed with the payment by clicking the button below.",  # TODO: Move this text to config file
+        reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    KeyboardButton(
+                    InlineKeyboardButton(
                         text="Pay now",
-                        web_app=WebAppInfo(
-                            payment_url
-                        ),  # TODO: Pass in the price id here (and optional customer ID if a customer exists in stripe)
+                        web_app=WebAppInfo(payment_url),
                     )
                 ],
             ]
@@ -165,18 +145,6 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def payment_successful(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = json.loads(update.effective_message.web_app_data.data)
-    print(data)
-
-    # TODO: Form the personalized links for the user to join the groups
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=f"Received WebApp data: {data}",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-
-
 if __name__ == "__main__":
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
@@ -188,12 +156,7 @@ if __name__ == "__main__":
 
     # Payment without shipping handler for a specific item
     application.add_handler(
-        CallbackQueryHandler(handle_subscription, pattern=r"^prod_.*$")
-    )
-
-    # Payment successful handler
-    application.add_handler(
-        MessageHandler(filters.StatusUpdate.WEB_APP_DATA, payment_successful)
+        CallbackQueryHandler(handle_subscription, pattern=r"^price_.*$")
     )
 
     # unknown command handler
