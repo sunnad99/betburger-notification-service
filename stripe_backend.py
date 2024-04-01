@@ -12,6 +12,7 @@ import pandas as pd
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from credentials import PAYMENT_PROVIDER_TOKEN
 
 # Set up logging
@@ -25,6 +26,7 @@ stripe.api_key = PAYMENT_PROVIDER_TOKEN
 
 
 # Initialize the FastAPI app for a simple web server
+templates = Jinja2Templates(directory=os.getenv("STATIC_DIR", "./"))
 app = FastAPI()
 
 
@@ -152,89 +154,10 @@ def secret():
     return JSONResponse({"client_secret": intent.client_secret})
 
 
-@app.get("/payment_link")
-def payment_link():
-    return HTMLResponse(
-        """
-        <!DOCTYPE html>
-<html lang="en">
+@app.get("/payment_link", response_class=HTMLResponse)
+def payment_link(request: Request):
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subscription Payment</title>
-    <script src="https://js.stripe.com/v3/"></script>
-</head>
-
-<body>
-    <h1>Subscription Payment</h1>
-    <form id="payment-form">
-        <div>
-            <label for="card-element">
-                Credit or debit card
-            </label>
-            <div id="card-element">
-                <!-- A Stripe Element will be inserted here. -->
-            </div>
-            <!-- Used to display form errors. -->
-            <div id="card-errors" role="alert"></div>
-        </div>
-        <button id="submit">
-            Pay
-        </button>
-    </form>
-
-    <script>
-        // Set your publishable key
-        const publishableKey = "pk_test_51OyIs4Dvoc9trV896kbQUbY3f8u8cmHmwI4u5yVvkJjCO1sbt0PujfcBNnvcbPYR0UB4hqlzlwU1BzplpvCEkjwZ00Eg7mNjJ5";
-        var stripe = Stripe(publishableKey);
-        var elements = stripe.elements();
-
-        // Create an instance of the card Element.
-        var card = elements.create('card');
-
-        // Add an instance of the card Element into the `card-element` div.
-        card.mount('#card-element');
-
-        // Handle real-time validation errors from the card Element.
-        card.addEventListener('change', function (event) {
-            var displayError = document.getElementById('card-errors');
-            if (event.error) {
-                displayError.textContent = event.error.message;
-            } else {
-                displayError.textContent = '';
-            }
-        });
-
-        // Handle form submission.
-        var form = document.getElementById('payment-form');
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-            stripe.createToken(card).then(function (result) {
-                if (result.error) {
-                    // Inform the user if there was an error.
-                    var errorElement = document.getElementById('card-errors');
-                    errorElement.textContent = result.error.message;
-                } else {
-                    // Send the token to your server to charge the user.
-                    stripeTokenHandler(result.token);
-                }
-            });
-        });
-
-        // Submit the form with the token ID.
-        function stripeTokenHandler(token) {
-            // You can send the token to your server to create a subscription
-            // Use fetch or another AJAX method to send the token to your server
-            console.log(token);
-        }
-    </script>
-</body>
-
-</html>
-
-    """
-    )
+    return templates.TemplateResponse(name="stripe.html", request=request)
 
 
 # Helper function to communicate ngrok URL to telegram bot
