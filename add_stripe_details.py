@@ -47,42 +47,38 @@ def create_product(
         unit_label=unit_label,
     )
 
-    price_id = product_data["default_price"]
-    product_id = product_data["id"]
+    stripe_price_id = product_data["default_price"]
+    stripe_product_id = product_data["id"]
 
-    payment_link = stripe.PaymentLink.create(
-        line_items=[{"price": price_id, "quantity": 1}],
-    )
-
+    # Store the product information in the database
     product = [
         {
             "name": name,
-            "stripe_product_id": product_id,
+            "stripe_product_id": stripe_product_id,
             "quantity": 1,
-            "payment_link": payment_link["url"],
         }
     ]
+    selector.create_products(product)
+    new_product = selector.get_products(stripe_product_id=stripe_product_id)[0]
 
+    # Store the price information in the database
     price = [
         {
-            "stripe_price_id": price_id,
+            "stripe_price_id": stripe_price_id,
             "price": unit_amount / 100,
             "currency": currency,
+            "product_id": new_product["id"],
         }
     ]
-
-    selector.create_products(product)
     selector.create_prices(price)
 
     if telegram_details:
-
-        products = selector.get_products(stripe_product_id=product_id)[0]
 
         group = [
             {
                 "name": telegram_details["group_name"],
                 "telegram_group_id": telegram_details["group_id"],
-                "product_id": products["id"],
+                "product_id": new_product["id"],
             }
         ]
         selector.create_groups(group)
