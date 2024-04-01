@@ -134,11 +134,13 @@ async def handle_subscription(
         telegram_user_id=user_id, temp_payment_message_id=message_id
     )
 
-    # Load the payment link for the product
+    # Load the payment link for the backend and create a payment link
     base_url = selector.get_base_url()
+    payment_url = f"{base_url}/payment_link?price_id={product_id}"
+    if customers:
+        payment_url += f"&customer_id={customers[0].get('stripe_customer_id')}"
 
     await query.delete_message()
-
     await query.message.reply_text(
         text="Please proceed with the payment by clicking the button below.",
         reply_markup=ReplyKeyboardMarkup(
@@ -147,8 +149,8 @@ async def handle_subscription(
                     KeyboardButton(
                         text="Pay now",
                         web_app=WebAppInfo(
-                            f"{base_url}/payment_link"
-                        ),  # TODO: Might pass the product_id here
+                            payment_url
+                        ),  # TODO: Pass in the price id here (and optional customer ID if a customer exists in stripe)
                     )
                 ],
             ]
