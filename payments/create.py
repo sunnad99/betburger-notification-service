@@ -49,8 +49,7 @@ def create_table_products() -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             stripe_product_id TEXT,
-            quantity INTEGER,
-            payment_link TEXT
+            quantity INTEGER
             );
             """
         )
@@ -99,7 +98,8 @@ def create_table_price() -> None:
             name TEXT,
             stripe_price_id TEXT,
             price REAL,
-            currency TEXT
+            currency TEXT,
+            product_id REFERENCES products(id) ON UPDATE CASCADE ON DELETE CASCADE
             );
             """
         )
