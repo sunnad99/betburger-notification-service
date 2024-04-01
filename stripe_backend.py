@@ -7,7 +7,6 @@ import logging
 import sqlite3
 import selector
 import update
-
 import pandas as pd
 
 from fastapi import FastAPI, Request
@@ -159,10 +158,9 @@ async def stripe_webhook(request: Request):
     return JSONResponse(content={}, status_code=200)
 
 
-@app.post("/secret")
+@app.post("/stripe_config")
 def secret():
-    intent = {}  # ... Create or retrieve the PaymentIntent
-    return JSONResponse({"client_secret": intent.client_secret})
+    return JSONResponse({"publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY")})
 
 
 # Helper function to communicate ngrok URL to telegram bot
