@@ -69,14 +69,12 @@ def create_products(products: list[dict]) -> None:
             INSERT INTO products (
                 name,
                 stripe_product_id,
-                quantity,
-                payment_link
+                quantity
             )
             VALUES (
                 :name,
                 :stripe_product_id,
-                :quantity,
-                :payment_link
+                :quantity
             )
             """,
             products,
@@ -109,12 +107,14 @@ def create_prices(prices: list[dict]) -> None:
             INSERT INTO price (
                 stripe_price_id,
                 price,
-                currency
+                currency,
+                product_id
             )
             VALUES (
                 :stripe_price_id,
                 :price,
-                :currency
+                :currency,
+                :product_id
             )
             """,
             prices,
