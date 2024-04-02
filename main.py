@@ -16,7 +16,7 @@ from utils import (
 from credentials import (
     BET_BURGER_TOKEN,
     BET_BURGER_FILTER_ID,
-    TELEGRAM_TOKEN,
+    TELEGRAM_AUTH_TOKEN,
     TELEGRAM_CHAT_MAPPING,
 )
 
@@ -68,7 +68,7 @@ def main():
                     # Send the messages to the Telegram channel
                     for message in messages:
 
-                        send_message(TELEGRAM_TOKEN, chat_id, message)
+                        send_message(TELEGRAM_AUTH_TOKEN, chat_id, message)
                         time.sleep(3)
 
                     logging.info(

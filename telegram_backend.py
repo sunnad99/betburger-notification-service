@@ -18,7 +18,7 @@ from telegram.ext import (
     CallbackQueryHandler,
 )
 
-from credentials import TELEGRAM_TOKEN, PAYMENT_PROVIDER_TOKEN
+from credentials import TELEGRAM_AUTH_TOKEN, STRIPE_AUTH_TOKEN
 
 from config import (
     BOT_START_MESSAGE,
@@ -35,7 +35,7 @@ from config import (
     SUCCESSFUL_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
 )
 
-stripe.api_key = PAYMENT_PROVIDER_TOKEN
+stripe.api_key = STRIPE_AUTH_TOKEN
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -116,7 +116,6 @@ async def handle_start_subscription(
             customer_id=customer_id, product_id=product_id
         )
 
-        print(customer_id, product_id)
         if subscriptions:
             # Check if the subscription is still active
             existing_subscription = subscriptions[0]
@@ -342,7 +341,7 @@ async def cancel_subscription_cancellation(
 
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    application = ApplicationBuilder().token(TELEGRAM_AUTH_TOKEN).build()
 
     start_subscription_handler = CommandHandler("start", start)
 
