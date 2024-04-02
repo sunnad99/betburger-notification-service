@@ -1,7 +1,7 @@
 import logging
 import datetime
 import selector
-import updater
+import pandas as pd
 
 from telegram import (
     Update,
@@ -19,7 +19,6 @@ from telegram.ext import (
 )
 
 from credentials import TELEGRAM_TOKEN
-from add_stripe_details import create_customer
 
 
 logging.basicConfig(
@@ -105,9 +104,10 @@ async def handle_subscription(
             existing_subscription = subscriptions[0]
             expiry_date = existing_subscription["subscription_expiry_date"]
 
-            # TODO: Fix this comparison to check if the subscription has expired
-            # If the subscription has not expired, do not create a new subscription
-            if expiry_date <= datetime.datetime.now(datetime.UTC):
+            # Don't allow the user to subscribe if they already have an active subscription
+            if pd.to_datetime(expiry_date, utc=True) <= datetime.datetime.now(
+                datetime.timezone.utc
+            ):
 
                 await query.answer()
                 await query.edit_message_text(
