@@ -14,7 +14,12 @@ from telegram import Bot
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from credentials import PAYMENT_PROVIDER_TOKEN, TELEGRAM_TOKEN
+from credentials import (
+    NGROK_AUTH_TOKEN,
+    STRIPE_AUTH_TOKEN,
+    STRIPE_PUBLISHABLE_TOKEN,
+    TELEGRAM_AUTH_TOKEN,
+)
 from config import (
     ALREADY_ACTIVE_SUBSCRIPTION,
     GOODS_DELIVERY_MESSAGE,
@@ -28,7 +33,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-stripe.api_key = PAYMENT_PROVIDER_TOKEN
+stripe.api_key = STRIPE_AUTH_TOKEN
 
 
 # Initialize the FastAPI app for a simple web server
@@ -38,7 +43,7 @@ app = FastAPI()
 
 @app.get("/stripe_config")
 def secret():
-    return JSONResponse({"publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY")})
+    return JSONResponse({"publishable_key": STRIPE_PUBLISHABLE_TOKEN})
 
 
 @app.post("/payment_webhook")
@@ -92,7 +97,7 @@ async def create_checkout_session(
     customer_id: str = None,
 ):
 
-    telegram_bot = Bot(TELEGRAM_TOKEN)
+    telegram_bot = Bot(TELEGRAM_AUTH_TOKEN)
 
     # Remove the temp message and tell the user that they already have an active subscription
     if customer_id:
@@ -154,7 +159,7 @@ async def successful_payment(
     telegram_user_id: str,
     session_id: str,
 ):
-    telegram_bot = Bot(TELEGRAM_TOKEN)
+    telegram_bot = Bot(TELEGRAM_AUTH_TOKEN)
 
     session = stripe.checkout.Session.retrieve(session_id)
     subscription = stripe.Subscription.retrieve(session.get("subscription"))
@@ -273,7 +278,7 @@ async def successful_payment(
 @app.get("/cancel_payment", response_class=HTMLResponse)
 async def cancel_payment(request: Request, session_id: str, web_app_query_id: str):
 
-    telegram_bot = Bot(TELEGRAM_TOKEN)
+    telegram_bot = Bot(TELEGRAM_AUTH_TOKEN)
     stripe.checkout.Session.expire(session_id)
 
     result = {
@@ -290,9 +295,7 @@ async def cancel_payment(request: Request, session_id: str, web_app_query_id: st
 
 if __name__ == "__main__":
 
-    USE_NGROK = os.environ.get("USE_NGROK", "False") == "True"
-    NGROK_AUTHTOKEN = os.environ.get("NGROK_AUTHTOKEN")
-    if USE_NGROK and NGROK_AUTHTOKEN:
+    if NGROK_AUTH_TOKEN:
         # pyngrok should only ever be installed or initialized in a dev environment when this flag is set
         from pyngrok import ngrok
 
