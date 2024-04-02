@@ -331,7 +331,7 @@ def get_prices(
 
 
 def get_subscriptions(
-    customer_id: int = None, product_id: int = None
+    customer_id: int = None, product_id: int = None, stripe_subscription_id: str = None
 ) -> list[dict] | bool:
     """
     Get subscriptions from the database
@@ -355,6 +355,8 @@ def get_subscriptions(
         # If product_id is provided, get the subscription with that product_id
         if product_id:
             query += f" AND product_id = {product_id}"
+    elif stripe_subscription_id:
+        query += f" WHERE stripe_subscription_id = '{stripe_subscription_id}'"
 
     try:
         conn = sqlite3.connect(DB_NAME)
