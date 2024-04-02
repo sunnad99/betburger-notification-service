@@ -1,6 +1,6 @@
 import stripe
 import selector
-from credentials import PAYMENT_PROVIDER_TOKEN
+from credentials import STRIPE_AUTH_TOKEN
 
 
 def create_product(
@@ -30,7 +30,7 @@ def create_product(
         None
     """
 
-    stripe.api_key = PAYMENT_PROVIDER_TOKEN
+    stripe.api_key = STRIPE_AUTH_TOKEN
 
     product_data = stripe.Product.create(
         name=name,
@@ -82,29 +82,3 @@ def create_product(
             }
         ]
         selector.create_groups(group)
-
-
-def create_customer(customer_info):
-    """
-    Create a new customer in Stripe and store the customer information in the database
-
-    Args:
-        customer_info: dict - Dictionary containing customer information
-
-    Returns:
-        None
-    """
-
-    print(PAYMENT_PROVIDER_TOKEN)
-    stripe.api_key = PAYMENT_PROVIDER_TOKEN
-
-    name = customer_info["name"]
-
-    customer = stripe.Customer.create(
-        name=name,
-    )
-
-    customer_info["stripe_customer_id"] = customer["id"]
-    customer = [customer_info]
-
-    selector.create_customers(customer)
