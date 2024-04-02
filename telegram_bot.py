@@ -138,18 +138,10 @@ async def handle_subscription(
     )
 
 
-async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Sorry, I didn't understand that command.",
-    )
-
-
 if __name__ == "__main__":
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     start_handler = CommandHandler("start", start)
-    unknown_handler = MessageHandler(filters.COMMAND, unknown)
 
     # simple start function
     application.add_handler(start_handler)
@@ -158,8 +150,5 @@ if __name__ == "__main__":
     application.add_handler(
         CallbackQueryHandler(handle_subscription, pattern=r"^price_.*$")
     )
-
-    # unknown command handler
-    application.add_handler(unknown_handler)
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
