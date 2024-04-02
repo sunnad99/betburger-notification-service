@@ -19,6 +19,7 @@ from credentials import (
     STRIPE_AUTH_TOKEN,
     STRIPE_PUBLISHABLE_TOKEN,
     TELEGRAM_AUTH_TOKEN,
+    STATIC_DIR,
 )
 from config import (
     ALREADY_ACTIVE_SUBSCRIPTION,
@@ -37,7 +38,7 @@ stripe.api_key = STRIPE_AUTH_TOKEN
 
 
 # Initialize the FastAPI app for a simple web server
-templates = Jinja2Templates(directory=os.getenv("STATIC_DIR", "./"))
+templates = Jinja2Templates(directory=STATIC_DIR)
 app = FastAPI()
 
 
