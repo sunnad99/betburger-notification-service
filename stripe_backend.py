@@ -15,6 +15,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from credentials import PAYMENT_PROVIDER_TOKEN, TELEGRAM_TOKEN
+from config import (
+    ALREADY_ACTIVE_SUBSCRIPTION,
+    GOODS_DELIVERY_MESSAGE,
+    PAYMENT_CANCELLATION_MESSAGE_TEXT,
+)
 
 # Set up logging
 logging.basicConfig(
@@ -106,7 +111,7 @@ async def create_checkout_session(
             await telegram_bot.answer_web_app_query(
                 web_app_query_id,
                 {
-                    "message_text": "You already have an active subscription for this product...",
+                    "message_text": ALREADY_ACTIVE_SUBSCRIPTION,
                     "type": "article",
                     "title": "Subscription Already Active",
                     "id": str(uuid.uuid4()),
@@ -169,20 +174,22 @@ async def successful_payment(
     )[0]
     groups = selector.get_groups(product_id=selected_product.get("id"))
 
-    # Creating a customer in the database
-    db_customer = [
-        {
-            "name": customer.get("name"),
-            "telegram_user_id": telegram_user_id,
-            "telegram_chat_id": telegram_user_id,
-            "telegram_temp_payment_message_id": None,
-            "stripe_customer_id": customer_id,
-        }
-    ]
-    selector.create_customers(db_customer)
+    # Only create a customer if they don't exist in the database
+    customers = selector.get_customers(stripe_customer_id=customer_id)
+    if not customers:
+        # Creating a customer in the database
+        db_customer = [
+            {
+                "name": customer.get("name"),
+                "telegram_user_id": telegram_user_id,
+                "telegram_chat_id": telegram_user_id,
+                "telegram_temp_payment_message_id": None,
+                "stripe_customer_id": customer_id,
+            }
+        ]
+        selector.create_customers(db_customer)
 
     # Creating a subscription in the database
-
     selected_customer = selector.get_customers(telegram_user_id=telegram_user_id)[0]
     (
         subscription_id,
@@ -246,14 +253,9 @@ async def successful_payment(
             )
             links.append("N/A")
 
-    links_str = ", ".join(links)
-
-    # TODO: Make the following message editable in the config files
-    message_to_send = f"""
-    The following are the invite links that the admin will have to approve of:
-
-        {links_str}
-    """
+    message_to_send = GOODS_DELIVERY_MESSAGE.format(
+        links=", \n".join(links),
+    )
 
     # Call the telegram API to send the message to the user
     result = {
@@ -275,9 +277,7 @@ async def cancel_payment(request: Request, session_id: str, web_app_query_id: st
     stripe.checkout.Session.expire(session_id)
 
     result = {
-        "message_text": """
-        The payment was cancelled by the user...
-        """,
+        "message_text": PAYMENT_CANCELLATION_MESSAGE_TEXT,
         "type": "article",
         "title": "Payment Cancelled",
         "id": str(uuid.uuid4()),
