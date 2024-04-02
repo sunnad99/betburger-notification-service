@@ -13,12 +13,16 @@ with open(CONFIG_FILENAME, "r") as f:
     CREDS = json.load(f)
 
 # Load the credentials for telegram
-TELEGRAM_TOKEN = CREDS.get("TELEGRAM_AUTH_TOKEN")
+TELEGRAM_AUTH_TOKEN = CREDS.get("TELEGRAM_AUTH_TOKEN")
 TELEGRAM_CHAT_MAPPING = CREDS.get("TELEGRAM_CHAT_MAPPING", {})
 
 # Load the credentials for betburger
 BET_BURGER_TOKEN = CREDS.get("BET_BURGER_TOKEN")
 BET_BURGER_FILTER_ID = CREDS.get("BET_BURGER_FILTER_ID")
 
-# Load the credentials for payment provider
-PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN")
+# Load the credentials for stripe
+STRIPE_AUTH_TOKEN = os.getenv("STRIPE_AUTH_TOKEN")
+STRIPE_PUBLISHABLE_TOKEN = os.getenv("STRIPE_PUBLISHABLE_TOKEN")
+
+# Load credentials for ngrok
+NGROK_AUTH_TOKEN = os.getenv("NGROK_AUTH_TOKEN")
