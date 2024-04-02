@@ -80,7 +80,7 @@ def payment_link(
 
 
 @app.get("/create_checkout_session")
-def create_checkout_session(
+async def create_checkout_session(
     price_id: str,
     web_app_query_id: str,
     temp_message_id: str,
@@ -88,7 +88,32 @@ def create_checkout_session(
     customer_id: str = None,
 ):
 
-    # TODO: Make sure not let the user pay for the same subscription twice
+    telegram_bot = Bot(TELEGRAM_TOKEN)
+
+    # Remove the temp message and tell the user that they already have an active subscription
+    if customer_id:
+        existing_customer = selector.get_customers(stripe_customer_id=customer_id)[0]
+        existing_price = selector.get_prices(stripe_price_id=price_id)[0]
+        subscriptions = selector.get_subscriptions(
+            customer_id=existing_customer["id"], product_id=existing_price["product_id"]
+        )
+
+        if subscriptions:
+
+            await telegram_bot.delete_message(
+                chat_id=telegram_user_id, message_id=temp_message_id
+            )
+
+            await telegram_bot.answer_web_app_query(
+                web_app_query_id,
+                {
+                    "message_text": "You already have an active subscription for this product...",
+                    "type": "article",
+                    "title": "Subscription Already Active",
+                    "id": str(uuid.uuid4()),
+                },
+            )
+            return JSONResponse({"error": "Subscription already active..."})
 
     base_url = selector.get_base_url()
 
