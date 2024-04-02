@@ -138,7 +138,7 @@ def create_table_subscriptions() -> None:
         logger.error(f"[-] {error}")
 
 
-if __name__ == "__main__":
+def create_tables():
     create_table_customers()
 
     create_table_products()

@@ -1,5 +1,6 @@
 import stripe
 import selector
+import creator
 from credentials import STRIPE_AUTH_TOKEN
 
 
@@ -82,3 +83,26 @@ def create_product(
             }
         ]
         selector.create_groups(group)
+
+
+if __name__ == "__main__":
+
+    creator.create_tables()
+
+    telegram_group_details = {
+        "group_id": "-1001949885470",
+        "group_name": "Test Tennis",
+    }
+
+    product_info = {
+        "name": "Unibet Premium",
+        "description": "This is a premium product for Unibet.",
+        "currency": "sek",
+        "interval": "month",
+        "interval_count": 1,
+        "unit_amount": 39900,
+        "unit_label": "kr",
+        "telegram_details": telegram_group_details,
+    }
+
+    create_product(**product_info)
