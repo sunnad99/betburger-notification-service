@@ -37,6 +37,35 @@ def secret():
     return JSONResponse({"publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY")})
 
 
+@app.post("/payment_webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    event = None
+
+    try:
+        event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+    except ValueError as e:
+        # Invalid payload
+        return JSONResponse(status_code=400)
+
+    if event.type == "payment_intent.succeeded":
+        payment_intent = event.data.object
+
+        print("PaymentIntent was successful!")
+
+    elif event.type == "payment_intent.failed":
+        pass
+
+    elif event.type == "payment_method.attached":
+        payment_method = event.data.object  # contains a stripe.PaymentMethod
+        print("PaymentMethod was attached to a Customer!")
+    # ... handle other event types
+    else:
+        print("Unhandled event type {}".format(event.type))
+
+    return JSONResponse(content={}, status_code=200)
+
+
 @app.get("/payment_link", response_class=HTMLResponse)
 def payment_link(
     request: Request, price_id: str, temp_message_id: str, customer_id: str = None
@@ -48,6 +77,44 @@ def payment_link(
         data["customer_id"] = customer_id
 
     return templates.TemplateResponse(request=request, name="stripe.html", context=data)
+
+
+@app.get("/create_checkout_session")
+def create_checkout_session(
+    price_id: str,
+    web_app_query_id: str,
+    temp_message_id: str,
+    telegram_user_id: str,
+    customer_id: str = None,
+):
+
+    # TODO: Make sure not let the user pay for the same subscription twice
+
+    base_url = selector.get_base_url()
+
+    session_object = {
+        "payment_method_types": ["card"],
+        "line_items": [
+            {
+                "price": price_id,
+                "quantity": 1,
+            }
+        ],
+        "mode": "subscription",
+        "success_url": f"{base_url}/successful_payment?web_app_query_id={web_app_query_id}&temp_message_id={temp_message_id}&telegram_user_id={telegram_user_id}&session_id={{CHECKOUT_SESSION_ID}}",
+        "cancel_url": f"{base_url}/cancel_payment?web_app_query_id={web_app_query_id}&session_id={{CHECKOUT_SESSION_ID}}",
+    }
+
+    if customer_id:
+        session_object["customer"] = customer_id
+
+    try:
+
+        checkout_session = stripe.checkout.Session.create(**session_object)
+
+        return JSONResponse({"session_id": checkout_session.id})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=403)
 
 
 @app.get("/successful_payment", response_class=HTMLResponse)
@@ -165,99 +232,36 @@ async def successful_payment(
     """
 
     # Call the telegram API to send the message to the user
-    params = {
-        "web_app_query_id": web_app_query_id,
-        "result": json.dumps(
-            {
-                "message_text": message_to_send,
-                "type": "article",
-                "title": "Successful Payment for Subscribtion",
-                "id": str(uuid.uuid4()),
-            }
-        ),
+    result = {
+        "message_text": message_to_send,
+        "type": "article",
+        "title": "Successful Payment for Subscribtion",
+        "id": str(uuid.uuid4()),
     }
 
-    response = requests.request(
-        "POST",
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerWebAppQuery",
-        params=params,
-    )
-
-    if response.status_code == 200:
-        print("Message sent successfully: ", response.text)
-    else:
-        print("Error sending message: ", response.text)
+    await telegram_bot.answer_web_app_query(web_app_query_id, result)
 
     return templates.TemplateResponse(request=request, name="success.html")
 
 
-@app.get("/create_checkout_session")
-def create_checkout_session(
-    price_id: str,
-    web_app_query_id: str,
-    temp_message_id: str,
-    telegram_user_id: str,
-    customer_id: str = None,
-):
+@app.get("/cancel_payment", response_class=HTMLResponse)
+async def cancel_payment(request: Request, session_id: str, web_app_query_id: str):
 
-    # TODO: Make sure not let the user pay for the same subscription twice
+    telegram_bot = Bot(TELEGRAM_TOKEN)
+    stripe.checkout.Session.expire(session_id)
 
-    base_url = selector.get_base_url()
-
-    session_object = {
-        "payment_method_types": ["card"],
-        "line_items": [
-            {
-                "price": price_id,
-                "quantity": 1,
-            }
-        ],
-        "mode": "subscription",
-        "success_url": f"{base_url}/successful_payment?web_app_query_id={web_app_query_id}&temp_message_id={temp_message_id}&telegram_user_id={telegram_user_id}&session_id={{CHECKOUT_SESSION_ID}}",
+    result = {
+        "message_text": """
+        The payment was cancelled by the user...
+        """,
+        "type": "article",
+        "title": "Payment Cancelled",
+        "id": str(uuid.uuid4()),
     }
 
-    if customer_id:
-        session_object["customer"] = customer_id
+    await telegram_bot.answer_web_app_query(web_app_query_id, result)
 
-    try:
-
-        checkout_session = stripe.checkout.Session.create(**session_object)
-
-        return JSONResponse({"session_id": checkout_session.id})
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=403)
-
-
-@app.post("/payment_webhook")
-async def stripe_webhook(request: Request):
-    payload = await request.body()
-    event = None
-
-    try:
-        event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
-    except ValueError as e:
-        # Invalid payload
-        return JSONResponse(status_code=400)
-
-    if event.type == "payment_intent.succeeded":
-        payment_intent = event.data.object
-
-        print("PaymentIntent was successful!")
-
-    elif event.type == "payment_intent.failed":
-        pass
-
-    elif event.type == "payment_method.attached":
-        payment_method = event.data.object  # contains a stripe.PaymentMethod
-        print("PaymentMethod was attached to a Customer!")
-    # ... handle other event types
-    else:
-        print("Unhandled event type {}".format(event.type))
-
-    return JSONResponse(content={}, status_code=200)
-
-
-# Helper function to communicate ngrok URL to telegram bot
+    return templates.TemplateResponse(request=request, name="cancel.html")
 
 
 if __name__ == "__main__":
