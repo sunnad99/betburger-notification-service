@@ -42,3 +42,52 @@ Nytt Spel!
 🕰️  {match_time}
 🌐 {bet_url}
 """
+
+####################### BOT MESSAGES TO USER #######################
+
+BOT_START_MESSAGE = "I'm a bot, please talk to me!"
+
+ALREADY_ACTIVE_SUBSCRIPTION = (
+    "You already have an active subscription for this product..."
+)
+
+NO_PRODUCTS_AVAILABLE = "No products available at the moment."
+
+PAY_NOW_MESSAGE_TEXT = """Please proceed with the payment by clicking the button below.
+{product_description} at a price of {price} {currency} per {interval}.
+"""
+
+PAY_NOW_BUTTON_TEXT = "Pay now {price} {currency}"
+
+NO_ACTIVE_SUBSCRIPTIONS_MESSAGE_TEXT = "You don't have any active subscriptions."
+
+## Subscription cancellation messages
+SELECT_SUBSCRIPTION_TO_CANCEL_MESSAGE_TEXT = (
+    "Please select the subscription you want to cancel."
+)
+
+CANCEL_CONFIRMATION_MESSAGE_TEXT = (
+    "Are you sure you want to cancel your {product_name} subscription?"
+)
+
+PROCEED_WITH_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT = "Yes"
+
+STOP_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT = "No"
+
+SUCCESSFUL_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT = (
+    "Your {product_name} subscription has been cancelled."
+)
+
+DENIED_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT = (
+    "Your {product_name} subscription has not been cancelled."
+)
+
+GOODS_DELIVERY_MESSAGE = """
+    Your subscription has been activated.
+    The following are the invite links that the admin will have to approve of:
+
+    {links}
+
+    The links will expire after an hour and are only 1 time use.
+"""
+PAYMENT_CANCELLATION_MESSAGE_TEXT = "The payment was cancelled by the user..."

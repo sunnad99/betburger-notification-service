@@ -20,6 +20,21 @@ from telegram.ext import (
 
 from credentials import TELEGRAM_TOKEN, PAYMENT_PROVIDER_TOKEN
 
+from config import (
+    BOT_START_MESSAGE,
+    ALREADY_ACTIVE_SUBSCRIPTION,
+    CANCEL_CONFIRMATION_MESSAGE_TEXT,
+    DENIED_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
+    NO_ACTIVE_SUBSCRIPTIONS_MESSAGE_TEXT,
+    NO_PRODUCTS_AVAILABLE,
+    PAY_NOW_BUTTON_TEXT,
+    PAY_NOW_MESSAGE_TEXT,
+    PROCEED_WITH_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
+    SELECT_SUBSCRIPTION_TO_CANCEL_MESSAGE_TEXT,
+    STOP_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
+    SUCCESSFUL_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
+)
+
 stripe.api_key = PAYMENT_PROVIDER_TOKEN
 
 logging.basicConfig(
@@ -45,7 +60,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not products:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="No products available at the moment.",
+            text=NO_PRODUCTS_AVAILABLE,
         )
         return
 
@@ -63,57 +78,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="I'm a bot, please talk to me!",  # TODO: This text needs to be replaced with the actual text for the betting bot
-        reply_markup=InlineKeyboardMarkup(options),
-    )
-
-
-async def cancel_subscription(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
-    """
-    Cancel the subscription process for a product
-
-    Args:
-        update: Update - The update object
-        context: ContextTypes.DEFAULT_TYPE - The context object
-
-    Returns:
-        None
-    """
-    user_id = update.effective_user.id
-    customers = selector.get_customers(telegram_user_id=user_id)
-
-    if not customers:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="You don't have any active subscriptions.",
-        )
-        return
-
-    customer = customers[0]
-    subscriptions = selector.get_subscriptions(customer_id=customer["id"])
-    if not subscriptions:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text="You don't have any active subscriptions.",
-        )
-        return
-
-    options = []
-    for subscription in subscriptions:
-        product = selector.get_products(product_id=subscription["product_id"])[0]
-        button = [
-            InlineKeyboardButton(
-                f"Cancel {product['name'].title()} subscription",
-                callback_data=subscription["stripe_subscription_id"],
-            )
-        ]
-        options.append(button)
-
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Please select the subscription you want to cancel.",
+        text=BOT_START_MESSAGE,
         reply_markup=InlineKeyboardMarkup(options),
     )
 
@@ -150,20 +115,20 @@ async def handle_start_subscription(
         subscriptions = selector.get_subscriptions(
             customer_id=customer_id, product_id=product_id
         )
+
+        print(customer_id, product_id)
         if subscriptions:
             # Check if the subscription is still active
             existing_subscription = subscriptions[0]
             expiry_date = existing_subscription["subscription_expiry_date"]
 
             # Don't allow the user to subscribe if they already have an active subscription
-            if pd.to_datetime(expiry_date, utc=True) <= datetime.datetime.now(
+            if pd.to_datetime(expiry_date, utc=True) >= datetime.datetime.now(
                 datetime.timezone.utc
             ):
 
                 await query.answer()
-                await query.edit_message_text(
-                    text="You already have an active subscription for this product..."
-                )
+                await query.edit_message_text(text=ALREADY_ACTIVE_SUBSCRIPTION)
                 return
 
     # Load the payment link for the backend and create a payment link
@@ -173,19 +138,81 @@ async def handle_start_subscription(
     if customers:
         payment_url += f"&customer_id={customers[0].get('stripe_customer_id')}"
 
+    pay_now_message_text = PAY_NOW_MESSAGE_TEXT.format(
+        product_description=selected_product["name"],
+        price=round(selected_price["price"]),
+        currency=selected_price["currency"].upper(),
+        interval="month",
+    )
+
+    pay_now_button_text = PAY_NOW_BUTTON_TEXT.format(
+        price=round(selected_price["price"]),
+        currency=selected_price["currency"].upper(),
+    )
+
     await query.answer()
     await query.edit_message_text(
-        text="Please proceed with the payment by clicking the button below.",  # TODO: Move this text to config file
+        text=pay_now_message_text,
         reply_markup=InlineKeyboardMarkup(
             [
                 [
                     InlineKeyboardButton(
-                        text="Pay now",
+                        text=pay_now_button_text,
                         web_app=WebAppInfo(payment_url),
                     )
                 ],
             ]
         ),
+    )
+
+
+async def cancel_subscription(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """
+    Cancel the subscription process for a product
+
+    Args:
+        update: Update - The update object
+        context: ContextTypes.DEFAULT_TYPE - The context object
+
+    Returns:
+        None
+    """
+    user_id = update.effective_user.id
+    customers = selector.get_customers(telegram_user_id=user_id)
+
+    if not customers:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=NO_ACTIVE_SUBSCRIPTIONS_MESSAGE_TEXT,
+        )
+        return
+
+    customer = customers[0]
+    subscriptions = selector.get_subscriptions(customer_id=customer["id"])
+    if not subscriptions:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=NO_ACTIVE_SUBSCRIPTIONS_MESSAGE_TEXT,
+        )
+        return
+
+    options = []
+    for subscription in subscriptions:
+        product = selector.get_products(product_id=subscription["product_id"])[0]
+        button = [
+            InlineKeyboardButton(
+                f"Cancel {product['name'].title()} subscription",
+                callback_data=subscription["stripe_subscription_id"],
+            )
+        ]
+        options.append(button)
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=SELECT_SUBSCRIPTION_TO_CANCEL_MESSAGE_TEXT,
+        reply_markup=InlineKeyboardMarkup(options),
     )
 
 
@@ -213,19 +240,23 @@ async def confirm_subscription_cancellation(
         product_id=existing_subscription["product_id"]
     )[0]
 
+    cancel_confirmation_message_text = CANCEL_CONFIRMATION_MESSAGE_TEXT.format(
+        product_name=existing_product["name"].title()
+    )
+
     # Confirm the subscription cancellation
     await query.answer()
     await query.edit_message_text(
-        text=f"Are you sure you want to cancel your {existing_product['name'].title()} subscription?",
+        text=cancel_confirmation_message_text,
         reply_markup=InlineKeyboardMarkup(
             [
                 [
                     InlineKeyboardButton(
-                        text="Yes",
+                        text=PROCEED_WITH_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
                         callback_data=f"confirm_{stripe_subscription_id}",
                     ),
                     InlineKeyboardButton(
-                        text="No",
+                        text=STOP_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT,
                         callback_data=f"cancel_{stripe_subscription_id}",
                     ),
                 ],
@@ -262,10 +293,16 @@ async def handle_end_subscription(
     stripe.Subscription.delete(stripe_subscription_id)
     deleter.delete_subscription(stripe_subscription_id)
 
+    successful_subscription_cancellation_message_text = (
+        SUCCESSFUL_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT.format(
+            product_name=existing_product["name"].title()
+        )
+    )
+
     # Let the user know that the subscription has been cancelled
     await query.answer()
     await query.edit_message_text(
-        text=f"Your {existing_product['name'].title()} subscription has been cancelled."
+        text=successful_subscription_cancellation_message_text
     )
 
 
@@ -293,11 +330,15 @@ async def cancel_subscription_cancellation(
         product_id=existing_subscription["product_id"]
     )[0]
 
+    denied_subscription_cancellation_message_text = (
+        DENIED_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT.format(
+            product_name=existing_product["name"].title()
+        )
+    )
+
     # Cancel the subscription cancellation
     await query.answer()
-    await query.edit_message_text(
-        text=f"Your {existing_product['name'].title()} subscription has not been cancelled."
-    )
+    await query.edit_message_text(text=denied_subscription_cancellation_message_text)
 
 
 if __name__ == "__main__":
