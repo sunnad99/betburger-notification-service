@@ -11,9 +11,8 @@ from bs4 import BeautifulSoup
 from config import URL_MAPPING, MIN_ODDS_FACTOR, PYTHON_TO_SQLITE_DTYPE_MAPPING
 from flags import FLAGS
 
-from requests.exceptions import RequestException
 
-
+# TODO: Remove this function and instead just use normal requests library. Handle all exceptions in respective places
 def make_request(url, headers=None, params=None, data=None, method="GET"):
 
     try:
@@ -90,21 +89,25 @@ def process_bets_with_retry(token, filter_id):
         try:
             bets = process_bets(token, filter_id)
             return bets
-        except RequestException as e:
+        except Exception as e:
             logging.error(f"Error retrieving bets: {e}")
+
+            # Log the error in a file
+            with open("error.log", "a") as f:
+                f.write(f"Error retrieving bets: {e}\n")
+
             if i < retries - 1:
                 logging.info(f"Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
                 logging.error("Failed to retrieve bets after multiple retries")
-                raise
 
     return pd.DataFrame()
 
 
 def process_bets(token, filter, per_page=500):
 
-    url = "https://rest-api-pr.betburger.com/api/v1/valuebets/bot_pro_search"
+    url = "https://rest-api-pr.betburger.com/api/sv1/valuebets/bot_pro_search"
 
     payload = f"access_token={token}&search_filter%5B%5D={filter}&per_page={per_page}"
     headers = {
@@ -112,7 +115,9 @@ def process_bets(token, filter, per_page=500):
         "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    response = make_request(url, headers, data=payload, method="POST")
+    response = requests.request("POST", url, headers=headers, data=payload)
+    # If the response was successful, no Exception will be raised
+    response.raise_for_status()
 
     response_json = response.json()
     outcomes = response_json["bets"]
@@ -154,6 +159,8 @@ def process_bets(token, filter, per_page=500):
                 "market_and_bet_type_param": str,
                 "started_at": "datetime64[s]",
                 "koef_last_modified_at": "datetime64[ms]",
+                "home": "str",
+                "away": "str",
             }
         )
     )
@@ -214,7 +221,7 @@ def process_bets(token, filter, per_page=500):
         axis=1,
     )
 
-    best_bets_df["receive_date"] = datetime.datetime.utcnow()
+    best_bets_df["receive_date"] = datetime.datetime.now(datetime.UTC)
 
     # Converting the columns to the correct data types to be stored in the database
     best_bets_df = best_bets_df.astype(
