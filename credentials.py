@@ -25,7 +25,7 @@ STRIPE_AUTH_TOKEN = os.getenv("STRIPE_AUTH_TOKEN")
 STRIPE_PUBLISHABLE_TOKEN = os.getenv("STRIPE_PUBLISHABLE_TOKEN")
 
 # Load credentials for ngrok
-NGROK_AUTH_TOKEN = os.getenv("NGROK_AUTH_TOKEN")
+NGROK_AUTH_TOKEN = os.getenv("NGROK_AUTHTOKEN")
 
 # Other creds
 STATIC_DIR = os.getenv("STATIC_DIR", "./")
