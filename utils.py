@@ -107,7 +107,7 @@ def process_bets_with_retry(token, filter_id):
 
 def process_bets(token, filter, per_page=500):
 
-    url = "https://rest-api-pr.betburger.com/api/sv1/valuebets/bot_pro_search"
+    url = "https://rest-api-pr.betburger.com/api/v1/valuebets/bot_pro_search"
 
     payload = f"access_token={token}&search_filter%5B%5D={filter}&per_page={per_page}"
     headers = {
