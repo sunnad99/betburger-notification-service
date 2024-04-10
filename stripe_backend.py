@@ -298,7 +298,7 @@ if __name__ == "__main__":
 
     if NGROK_AUTH_TOKEN:
         # pyngrok should only ever be installed or initialized in a dev environment when this flag is set
-        from pyngrok import ngrok
+        from pyngrok import conf, ngrok
 
         # Get the dev server port (defaults to 8000 for Uvicorn, can be overridden with `--port`
         # when starting the server
@@ -307,7 +307,13 @@ if __name__ == "__main__":
         )
 
         # Open a ngrok tunnel to the dev server
-        public_url = ngrok.connect(port).public_url
+        pyngrok_config = conf.PyngrokConfig(region="eu")
+        ngrok_tunnel = ngrok.connect(
+            port,
+            pyngrok_config=pyngrok_config,
+            request_header={"add": ["ngrok-skip-browser-warning: true"]},
+        )
+        public_url = ngrok_tunnel.public_url
         logger.info(f'ngrok tunnel "{public_url}" -> "http://127.0.0.1:{port}"')
 
         # Update any base URLs or webhooks to use the public ngrok URL
