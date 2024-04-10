@@ -6,9 +6,15 @@ import datetime
 import pytz
 import requests
 import pandas as pd
+import numpy as np
 from bs4 import BeautifulSoup
 
-from config import URL_MAPPING, MIN_ODDS_FACTOR, PYTHON_TO_SQLITE_DTYPE_MAPPING
+from config import (
+    URL_MAPPING,
+    MIN_ODDS_FACTOR,
+    PYTHON_TO_SQLITE_DTYPE_MAPPING,
+    BET_TYPES_TO_FILTER_OUT,
+)
 from flags import FLAGS
 
 
@@ -127,7 +133,12 @@ def process_bets(token, filter, per_page=500):
     if not outcomes:
         return pd.DataFrame()
 
+    bet_types_to_filter_ids = np.array(BET_TYPES_TO_FILTER_OUT.values()).flatten()
     outcomes_df = pd.DataFrame(outcomes)
+    outcomes_df = outcomes_df[
+        ~outcomes_df["market_and_bet_type"].isin(bet_types_to_filter_ids)
+    ]  # Filter out the bet types that are not needed
+
     value_bets_df = pd.DataFrame(value_bets)[["bet_id", "avg_koef", "percent"]]
 
     # Mapping the outcome ids to the outcome names

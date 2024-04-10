@@ -12,6 +12,11 @@ URL_MAPPING = {19: "https://www.unibet.com/betting/sports/event/{bookmaker_event
 MIN_ODDS_FACTOR = 0.9
 FREQUENCY_SECONDS = 100
 
+# NOTE: The 2nd number in the range is exclusive
+# i.e. its not included so e.g. range(1, 5) = [1, 2, 3, 4]
+BET_TYPES_TO_FILTER_OUT = {
+    "offsides": list(range(223, 229)) + list(range(271, 287)),
+}
 
 TIME_ZONE = pytz.timezone("Europe/Stockholm")
 
