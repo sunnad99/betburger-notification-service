@@ -4,9 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+src_dir = os.path.dirname(__file__)
 
 CONFIG_FILENAME = os.path.join(
-    os.path.dirname(__file__), os.environ.get("CONFIG_FILENAME", "bot_test_config.json")
+    src_dir, os.environ.get("CONFIG_FILENAME", "bot_test_config.json")
 )
 
 # Load the credentials from the config file
@@ -30,13 +31,4 @@ STRIPE_PUBLISHABLE_TOKEN = os.getenv("STRIPE_PUBLISHABLE_TOKEN")
 NGROK_AUTH_TOKEN = os.getenv("NGROK_AUTHTOKEN")
 
 # Other creds
-STATIC_DIR = os.getenv("STATIC_DIR", "./")
-
-## Print every credential
-print(TELEGRAM_AUTH_TOKEN)
-print(TELEGRAM_CHAT_MAPPING)
-print(BET_BURGER_TOKEN)
-print(BET_BURGER_FILTER_ID)
-print(STRIPE_AUTH_TOKEN)
-print(STRIPE_PUBLISHABLE_TOKEN)
-print(NGROK_AUTH_TOKEN)
+STATIC_DIR = os.path.join(src_dir, os.getenv("STATIC_DIR", "./"))
