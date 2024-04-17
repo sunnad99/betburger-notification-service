@@ -1,7 +1,6 @@
 import stripe
-import selector
-import creator
-from credentials import STRIPE_AUTH_TOKEN
+from . import selector, creator
+from ..credentials import STRIPE_AUTH_TOKEN
 
 
 def create_product(

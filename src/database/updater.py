@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import logging
 
@@ -6,7 +7,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB_NAME = "payments.db"
+DB_NAME = os.path.join(os.path.dirname(__file__), "payments.db")
 
 
 def update_temp_payment_message_id(
@@ -47,8 +48,8 @@ def update_temp_payment_message_id(
 
 
 def update_ngrok_url(base_url: str) -> None:
-
-    conn = sqlite3.connect("backend.db")
+    settings_db_path = os.path.join(os.path.dirname(__file__), "backend.db")
+    conn = sqlite3.connect(settings_db_path)
     cursor = conn.cursor()
 
     cursor.execute(

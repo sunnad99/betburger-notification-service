@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import logging
 
@@ -7,7 +8,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-DB_NAME = "payments.db"
+DB_NAME = os.path.join(os.path.dirname(__file__), "payments.db")
 
 
 def create_table_customers() -> None:
