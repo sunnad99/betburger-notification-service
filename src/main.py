@@ -83,11 +83,11 @@ def main():
 
 
 if __name__ == "__main__":
+    main()
+    # # Schedule the task to run every FREQUENCY_MINUTES
+    # schedule.every(FREQUENCY_SECONDS).seconds.do(main)
 
-    # Schedule the task to run every FREQUENCY_MINUTES
-    schedule.every(FREQUENCY_SECONDS).seconds.do(main)
-
-    # Run the scheduler in the background
-    while True:
-        schedule.run_pending()
-        time.sleep(1)  # Sleep for 1 second to avoid high CPU usage
+    # # Run the scheduler in the background
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(1)  # Sleep for 1 second to avoid high CPU usage

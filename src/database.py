@@ -1,9 +1,12 @@
+import os
 import sqlite3
 
 
 class Database:
     def __init__(self, db_file="bets.db"):
-        self.db_file = db_file
+
+        db_path = os.path.join(os.path.dirname(__file__), db_file)
+        self.db_file = db_path
 
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_file)
