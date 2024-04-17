@@ -1,4 +1,3 @@
-import os
 import sys
 import json
 import stripe
@@ -6,22 +5,21 @@ import datetime
 import uuid
 import uvicorn
 import logging
-import selector
-import updater
 import pandas as pd
-
 from telegram import Bot
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from credentials import (
+
+from .. import database
+from ..credentials import (
     NGROK_AUTH_TOKEN,
     STRIPE_AUTH_TOKEN,
     STRIPE_PUBLISHABLE_TOKEN,
     TELEGRAM_AUTH_TOKEN,
     STATIC_DIR,
 )
-from config import (
+from ..config import (
     ALREADY_ACTIVE_SUBSCRIPTION,
     GOODS_DELIVERY_MESSAGE,
     PAYMENT_CANCELLATION_MESSAGE_TEXT,
@@ -102,9 +100,11 @@ async def create_checkout_session(
 
     # Remove the temp message and tell the user that they already have an active subscription
     if customer_id:
-        existing_customer = selector.get_customers(stripe_customer_id=customer_id)[0]
-        existing_price = selector.get_prices(stripe_price_id=price_id)[0]
-        subscriptions = selector.get_subscriptions(
+        existing_customer = database.selector.get_customers(
+            stripe_customer_id=customer_id
+        )[0]
+        existing_price = database.selector.get_prices(stripe_price_id=price_id)[0]
+        subscriptions = database.selector.get_subscriptions(
             customer_id=existing_customer["id"], product_id=existing_price["product_id"]
         )
 
@@ -125,7 +125,7 @@ async def create_checkout_session(
             )
             return JSONResponse({"error": "Subscription already active..."})
 
-    base_url = selector.get_base_url()
+    base_url = database.selector.get_base_url()
 
     session_object = {
         "payment_method_types": ["card"],
@@ -174,14 +174,14 @@ async def successful_payment(
         plan = subscription.get("items").data[0].price
 
     stripe_price_id = plan.get("id")
-    selected_price = selector.get_prices(stripe_price_id=stripe_price_id)[0]
-    selected_product = selector.get_products(
+    selected_price = database.selector.get_prices(stripe_price_id=stripe_price_id)[0]
+    selected_product = database.selector.get_products(
         product_id=selected_price.get("product_id")
     )[0]
-    groups = selector.get_groups(product_id=selected_product.get("id"))
+    groups = database.selector.get_groups(product_id=selected_product.get("id"))
 
     # Only create a customer if they don't exist in the database
-    customers = selector.get_customers(stripe_customer_id=customer_id)
+    customers = database.selector.get_customers(stripe_customer_id=customer_id)
     if not customers:
         # Creating a customer in the database
         db_customer = [
@@ -193,10 +193,12 @@ async def successful_payment(
                 "stripe_customer_id": customer_id,
             }
         ]
-        selector.create_customers(db_customer)
+        database.selector.create_customers(db_customer)
 
     # Creating a subscription in the database
-    selected_customer = selector.get_customers(telegram_user_id=telegram_user_id)[0]
+    selected_customer = database.selector.get_customers(
+        telegram_user_id=telegram_user_id
+    )[0]
     (
         subscription_id,
         subscription_first_date,
@@ -215,7 +217,7 @@ async def successful_payment(
         ),
     )
 
-    selector.create_subscriptions(
+    database.selector.create_subscriptions(
         [
             {
                 "customer_id": selected_customer.get("id"),
@@ -317,6 +319,6 @@ if __name__ == "__main__":
         logger.info(f'ngrok tunnel "{public_url}" -> "http://127.0.0.1:{port}"')
 
         # Update any base URLs or webhooks to use the public ngrok URL
-        updater.update_ngrok_url(public_url)
+        database.updater.update_ngrok_url(public_url)
 
     uvicorn.run(app)

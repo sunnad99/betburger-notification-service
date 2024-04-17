@@ -1,8 +1,7 @@
 import logging
 import datetime
-from . import selector, deleter
-import pandas as pd
 import stripe
+import pandas as pd
 
 from telegram import (
     Update,
@@ -17,6 +16,7 @@ from telegram.ext import (
     CallbackQueryHandler,
 )
 
+from .. import database
 from ..credentials import TELEGRAM_AUTH_TOKEN, STRIPE_AUTH_TOKEN
 
 from ..config import (
@@ -53,7 +53,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         None
     """
 
-    products = selector.get_products()
+    products = database.selector.get_products()
 
     # If there are no products, tell the user that there are no products available
     if not products:
@@ -64,7 +64,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     options = []
-    prices = selector.get_prices()
+    prices = database.selector.get_prices()
     for product in products:
         price = next(filter(lambda price: product["id"] == price["product_id"], prices))
         button = [
@@ -101,9 +101,11 @@ async def handle_start_subscription(
     stripe_price_id = query.data
     message_id = query.message.message_id
 
-    selected_price = selector.get_prices(stripe_price_id=stripe_price_id)[0]
-    selected_product = selector.get_products(product_id=selected_price["product_id"])[0]
-    customers = selector.get_customers(telegram_user_id=user_id)
+    selected_price = database.selector.get_prices(stripe_price_id=stripe_price_id)[0]
+    selected_product = database.selector.get_products(
+        product_id=selected_price["product_id"]
+    )[0]
+    customers = database.selector.get_customers(telegram_user_id=user_id)
 
     product_id = selected_product["id"]
     if customers:
@@ -111,7 +113,7 @@ async def handle_start_subscription(
         existing_customer = customers[0]
         # Check if the customer has an active subscription
         customer_id = existing_customer["id"]
-        subscriptions = selector.get_subscriptions(
+        subscriptions = database.selector.get_subscriptions(
             customer_id=customer_id, product_id=product_id
         )
 
@@ -130,7 +132,7 @@ async def handle_start_subscription(
                 return
 
     # Load the payment link for the backend and create a payment link
-    base_url = selector.get_base_url()
+    base_url = database.selector.get_base_url()
     stripe_price_id = selected_price["stripe_price_id"]
     payment_url = f"{base_url}/payment_link?temp_message_id={message_id}&price_id={stripe_price_id}"
     if customers:
@@ -178,7 +180,7 @@ async def cancel_subscription(
         None
     """
     user_id = update.effective_user.id
-    customers = selector.get_customers(telegram_user_id=user_id)
+    customers = database.selector.get_customers(telegram_user_id=user_id)
 
     if not customers:
         await context.bot.send_message(
@@ -188,7 +190,7 @@ async def cancel_subscription(
         return
 
     customer = customers[0]
-    subscriptions = selector.get_subscriptions(customer_id=customer["id"])
+    subscriptions = database.selector.get_subscriptions(customer_id=customer["id"])
     if not subscriptions:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -198,7 +200,9 @@ async def cancel_subscription(
 
     options = []
     for subscription in subscriptions:
-        product = selector.get_products(product_id=subscription["product_id"])[0]
+        product = database.selector.get_products(product_id=subscription["product_id"])[
+            0
+        ]
         button = [
             InlineKeyboardButton(
                 f"Cancel {product['name'].title()} subscription",
@@ -231,10 +235,10 @@ async def confirm_subscription_cancellation(
     query = update.callback_query
     stripe_subscription_id = query.data
 
-    existing_subscription = selector.get_subscriptions(
+    existing_subscription = database.selector.get_subscriptions(
         stripe_subscription_id=stripe_subscription_id
     )[0]
-    existing_product = selector.get_products(
+    existing_product = database.selector.get_products(
         product_id=existing_subscription["product_id"]
     )[0]
 
@@ -280,16 +284,16 @@ async def handle_end_subscription(
     query = update.callback_query
     stripe_subscription_id = query.data.replace("confirm_", "")
 
-    existing_subscription = selector.get_subscriptions(
+    existing_subscription = database.selector.get_subscriptions(
         stripe_subscription_id=stripe_subscription_id
     )[0]
-    existing_product = selector.get_products(
+    existing_product = database.selector.get_products(
         product_id=existing_subscription["product_id"]
     )[0]
 
     # Cancel the subscription from stripe and remove it from the database
     stripe.Subscription.delete(stripe_subscription_id)
-    deleter.delete_subscription(stripe_subscription_id)
+    database.deleter.delete_subscription(stripe_subscription_id)
 
     successful_subscription_cancellation_message_text = (
         SUCCESSFUL_SUBSCRIPTION_CANCELLATION_MESSAGE_TEXT.format(
@@ -321,10 +325,10 @@ async def cancel_subscription_cancellation(
     query = update.callback_query
     stripe_subscription_id = query.data.replace("cancel_", "")
 
-    existing_subscription = selector.get_subscriptions(
+    existing_subscription = database.selector.get_subscriptions(
         stripe_subscription_id=stripe_subscription_id
     )[0]
-    existing_product = selector.get_products(
+    existing_product = database.selector.get_products(
         product_id=existing_subscription["product_id"]
     )[0]
 
