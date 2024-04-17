@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import logging
 
@@ -6,7 +7,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB_NAME = "payments.db"
+DB_NAME = os.path.join(os.path.dirname(__file__), "payments.db")
 
 
 def create_customers(customers: list[dict]) -> None:
@@ -410,13 +411,13 @@ def get_groups(product_id: int = None) -> list[dict] | bool:
 
 def get_base_url():
 
-    SETTINGS_DB = "backend.db"
+    settings_db = os.path.join(os.path.dirname(__file__), "backend.db")
     query = """--sql
     SELECT value FROM settings WHERE name = "base_url"
     """
 
     try:
-        conn = sqlite3.connect(SETTINGS_DB)
+        conn = sqlite3.connect(settings_db)
         cursor = conn.cursor()
         cursor.execute(query)
         return cursor.fetchone()[0]

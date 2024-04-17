@@ -1,7 +1,6 @@
 import logging
 import datetime
-import selector
-import deleter
+from . import selector, deleter
 import pandas as pd
 import stripe
 
@@ -18,9 +17,9 @@ from telegram.ext import (
     CallbackQueryHandler,
 )
 
-from credentials import TELEGRAM_AUTH_TOKEN, STRIPE_AUTH_TOKEN
+from ..credentials import TELEGRAM_AUTH_TOKEN, STRIPE_AUTH_TOKEN
 
-from config import (
+from ..config import (
     BOT_START_MESSAGE,
     ALREADY_ACTIVE_SUBSCRIPTION,
     CANCEL_CONFIRMATION_MESSAGE_TEXT,

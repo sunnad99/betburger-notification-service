@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import logging
 
@@ -6,7 +7,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DB_NAME = "payments.db"
+DB_NAME = os.path.join(os.path.dirname(__file__), "payments.db")
 
 
 def delete_subscription(stripe_subscription_id: str):
