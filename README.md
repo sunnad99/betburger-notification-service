@@ -8,13 +8,13 @@ The user is then provided with a group link to join the telegram group associate
 
 ## Features
 
+- Live prematch value bets
 - Fully local service
   - SQLite database for storing user data and bets
   - NGROK for exposing the local server to the internet
   - Scheduler for running the telegram bot
   - FastAPI Stripe backend for handling subscription payments
   - Local Telegram backend for handling subscription payments
-- Sending live prematch value bets to telegram groups
   - Currently only Unibet is supported
 - Stripe subscription payments for users to access the service
 - Temporary group links for users to join the telegram group associated with the bookmaker they have subscribed to
@@ -68,6 +68,10 @@ python -m src.server.main
 ```
 
 ## Future Aspects:
+
+[ ] Allow multiple filter id requests to be run at the same time (Betburger only)
+
+[ ] Allow messages to be sent to multiple telegram groups at the same time based on the bookmaker
 
 [ ] Add multiple APIs for retrieving bets and have a common interface (e.g bets.retrieve() will be a method that will return the bets in our own schema regardless of which API is calling it)
 
