@@ -2,9 +2,9 @@ import time
 import logging
 import schedule
 
-from database import Database
-from config import BASE_MESSAGE, SPORT_EMOJI_MAPPING, TIME_ZONE, FREQUENCY_SECONDS
-from utils import (
+from .bot_db import Database
+from .config import BASE_MESSAGE, SPORT_EMOJI_MAPPING, TIME_ZONE, FREQUENCY_SECONDS
+from .utils import (
     process_bets_with_retry,
     format_messages,
     load_duplicate_records,
@@ -13,7 +13,7 @@ from utils import (
 )
 
 
-from credentials import (
+from .credentials import (
     BET_BURGER_TOKEN,
     BET_BURGER_FILTER_ID,
     TELEGRAM_AUTH_TOKEN,
@@ -58,12 +58,8 @@ def main():
                         continue
 
                     # Format the bets into messages
-                    messages = format_messages(
-                        sport_bets_df, BASE_MESSAGE, TIME_ZONE, sport_emoji
-                    )
-                    logging.info(
-                        f"Formatted about {len(messages)} messages for sport id {sport_id}"
-                    )
+                    messages = format_messages(sport_bets_df, BASE_MESSAGE, TIME_ZONE, sport_emoji)
+                    logging.info(f"Formatted about {len(messages)} messages for sport id {sport_id}")
 
                     # Send the messages to the Telegram channel
                     for message in messages:
@@ -71,13 +67,9 @@ def main():
                         send_message(TELEGRAM_AUTH_TOKEN, chat_id, message)
                         time.sleep(3)
 
-                    logging.info(
-                        f"Sent {len(messages)} messages to the Telegram channel with id {chat_id}"
-                    )
+                    logging.info(f"Sent {len(messages)} messages to the Telegram channel with id {chat_id}")
             else:
-                logging.warning(
-                    "Duplicate records retrieved from the database...skipping the process"
-                )
+                logging.warning("Duplicate records retrieved from the database...skipping the process")
         else:
             logging.warning("No bets retrieved from the API...skipping the process")
 

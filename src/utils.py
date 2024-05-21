@@ -9,13 +9,13 @@ import pandas as pd
 import numpy as np
 from bs4 import BeautifulSoup
 
-from config import (
+from .config import (
     URL_MAPPING,
     MIN_ODDS_FACTOR,
     PYTHON_TO_SQLITE_DTYPE_MAPPING,
     BET_TYPES_TO_FILTER_OUT,
 )
-from flags import FLAGS
+from .flags import FLAGS
 
 
 # TODO: Remove this function and instead just use normal requests library. Handle all exceptions in respective places
