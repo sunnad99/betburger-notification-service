@@ -1,10 +1,6 @@
 # BETBURGER NOTIFICATION SERVICE
 
-This service serves to provide prematch value bets. Bets are sent to telegram groups where each group is associated with a bookmaker.
-
-Users can subscribe to the service, to a specific bookmaker, by paying a monthly subscription fee for each supported bookmaker.
-
-The user is then provided with a group link to join the telegram group associated with the bookmaker they have subscribed to.
+This service serves to provide prematch value bets. Bets are sent to telegram groups where each group is associated with a bookmaker. Users can subscribe to the service, to a specific bookmaker, by paying a monthly subscription fee for each supported bookmaker. The user is then provided with a group link to join the telegram group associated with the bookmaker they have subscribed to.
 
 ## Features
 
