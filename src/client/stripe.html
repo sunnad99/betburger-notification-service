@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Payment</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+
+<body>
+
+    <!-- Add hidden elements to store the price_id and customer_id without displaying them -->
+    <div id="price_id" style="display: none;">{{price_id}}</div>
+    <div id="temp_message_id" style="display: none;">{{temp_message_id}}</div>
+    {% if customer_id %}
+    <div id="customer_id" style="display: none;">{{customer_id}}</div>
+    {% endif %}
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", async () => {
+
+            const telegram_data = Telegram.WebApp.initDataUnsafe;
+
+            // Extract the query id and the user id
+            const { query_id, user } = telegram_data;
+            const { id } = user;
+
+            const { publishable_key } = await fetch("/stripe_config").then((r) => r.json());
+
+            var stripe = Stripe(publishable_key);
+
+            // Fetch the customer_id and price_id from html elements
+            const price_id = document.getElementById("price_id").textContent;
+            const customer_id =
+                document.getElementById("customer_id")?.textContent || null;
+            const temp_message_id = document.getElementById("temp_message_id").textContent;
+
+
+            let url = `/create_checkout_session?web_app_query_id=${query_id}&temp_message_id=${temp_message_id}&telegram_user_id=${id}&price_id=${price_id}`
+            if (customer_id) {
+                url += `&customer_id=${customer_id}`
+            }
+
+            const { session_id } = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            }).then((r) => r.json());
+
+            stripe.redirectToCheckout({ sessionId: session_id });
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,9 +1,12 @@
+import os
 import sqlite3
 
 
 class Database:
     def __init__(self, db_file="bets.db"):
-        self.db_file = db_file
+
+        db_path = os.path.join(os.path.dirname(__file__), db_file)
+        self.db_file = db_path
 
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_file)
@@ -37,7 +40,8 @@ class Database:
                 min_koef REAL,
                 bet_url TEXT,
                 bet_info TEXT,
-                receive_date TEXT
+                receive_date TEXT,
+                sport_id INTEGER
             )
         """
         )
@@ -49,13 +53,23 @@ class Database:
             INSERT INTO bets (
                 id, market_and_bet_type, bookmaker_event_id, bookmaker_id, league, event_name, home, away,
                 swap_teams, started_at, koef_last_modified_at, bookmaker_event_direct_link, koef, avg_koef,
-                percent, min_koef, bet_url, bet_info, receive_date
+                percent, min_koef, bet_url, bet_info, receive_date, sport_id
             )
             VALUES (:id, :market_and_bet_type, :bookmaker_event_id, :bookmaker_id, :league, :event_name, :home, :away,
                 :swap_teams, :started_at, :koef_last_modified_at, :bookmaker_event_direct_link, :koef, :avg_koef,
-                :percent, :min_koef, :bet_url, :bet_info, :receive_date)
+                :percent, :min_koef, :bet_url, :bet_info, :receive_date, :sport_id)
         """,
             data,
+        )
+        self.conn.commit()
+
+    def add_columns(self, column_name, data_type):
+        self.cursor.execute(
+            """
+            ALTER TABLE bets ADD COLUMN {column_name} {data_type}
+        """.format(
+                column_name=column_name, data_type=data_type
+            )
         )
         self.conn.commit()
 

@@ -1,15 +1,24 @@
 import asyncio
 import time
+import sqlite3
+import logging
 import datetime
 import pytz
 import requests
 import pandas as pd
+import numpy as np
 from bs4 import BeautifulSoup
 
-from config import URL_MAPPING, MIN_ODDS_FACTOR
-from flags import FLAGS
+from .config import (
+    URL_MAPPING,
+    MIN_ODDS_FACTOR,
+    PYTHON_TO_SQLITE_DTYPE_MAPPING,
+    BET_TYPES_TO_FILTER_OUT,
+)
+from .flags import FLAGS
 
 
+# TODO: Remove this function and instead just use normal requests library. Handle all exceptions in respective places
 def make_request(url, headers=None, params=None, data=None, method="GET"):
 
     try:
@@ -77,6 +86,31 @@ def get_betting_mapping():
     return bet_mappings
 
 
+# Obtain the bets from BetBurger
+def process_bets_with_retry(token, filter_id):
+    retries = 3
+    delay = 2
+
+    for i in range(retries):
+        try:
+            bets = process_bets(token, filter_id)
+            return bets
+        except Exception as e:
+            logging.error(f"Error retrieving bets: {e}")
+
+            # Log the error in a file
+            with open("error.log", "a") as f:
+                f.write(f"Error retrieving bets: {e}\n")
+
+            if i < retries - 1:
+                logging.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logging.error("Failed to retrieve bets after multiple retries")
+
+    return pd.DataFrame()
+
+
 def process_bets(token, filter, per_page=500):
 
     url = "https://rest-api-pr.betburger.com/api/v1/valuebets/bot_pro_search"
@@ -87,7 +121,9 @@ def process_bets(token, filter, per_page=500):
         "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    response = make_request(url, headers, data=payload, method="POST")
+    response = requests.request("POST", url, headers=headers, data=payload)
+    # If the response was successful, no Exception will be raised
+    response.raise_for_status()
 
     response_json = response.json()
     outcomes = response_json["bets"]
@@ -97,7 +133,12 @@ def process_bets(token, filter, per_page=500):
     if not outcomes:
         return pd.DataFrame()
 
+    bet_types_to_filter_ids = np.array(BET_TYPES_TO_FILTER_OUT.values()).flatten()
     outcomes_df = pd.DataFrame(outcomes)
+    outcomes_df = outcomes_df[
+        ~outcomes_df["market_and_bet_type"].isin(bet_types_to_filter_ids)
+    ]  # Filter out the bet types that are not needed
+
     value_bets_df = pd.DataFrame(value_bets)[["bet_id", "avg_koef", "percent"]]
 
     # Mapping the outcome ids to the outcome names
@@ -115,6 +156,7 @@ def process_bets(token, filter, per_page=500):
                 "event_name",
                 "home",
                 "away",
+                "sport_id",
                 "swap_teams",
                 "started_at",
                 "koef_last_modified_at",
@@ -128,6 +170,8 @@ def process_bets(token, filter, per_page=500):
                 "market_and_bet_type_param": str,
                 "started_at": "datetime64[s]",
                 "koef_last_modified_at": "datetime64[ms]",
+                "home": "str",
+                "away": "str",
             }
         )
     )
@@ -188,7 +232,7 @@ def process_bets(token, filter, per_page=500):
         axis=1,
     )
 
-    best_bets_df["receive_date"] = datetime.datetime.utcnow()
+    best_bets_df["receive_date"] = datetime.datetime.now(datetime.UTC)
 
     # Converting the columns to the correct data types to be stored in the database
     best_bets_df = best_bets_df.astype(
@@ -206,22 +250,37 @@ def filter_new_bets(api_bets, db_bets):
     ids_to_insert = set(api_bets.id) - set(db_bets.id)
     new_bets_df = api_bets[api_bets.id.isin(ids_to_insert)]
 
-    new_bets = new_bets_df.to_dict(orient="records")
-    return new_bets
+    return new_bets_df
 
 
 def load_duplicate_records(bets, db):
 
     ids = tuple(bets.id)
-
     ids_str = str(ids) if len(ids) > 1 else f"('{ids[0]}')"
 
     filtered_db_records = db.get_data(ids_str)
     filtered_db_df = pd.DataFrame(filtered_db_records, columns=bets.columns)
 
-    new_bets = filter_new_bets(bets, filtered_db_df)
+    new_bets_df = filter_new_bets(bets, filtered_db_df)
 
-    return new_bets
+    return new_bets_df
+
+
+def insert_new_bets(db, new_bets_df, new_bets):
+    try:
+        # Insert the new bets into the database
+        db.insert_data(new_bets)
+    except sqlite3.OperationalError as e:
+        column_name = str(e).split(" ")[-1]
+        column_dtype = new_bets_df.dtypes[column_name]
+        logging.warning(
+            f"There was a difficulty inserting the new bets into the database...adding column {column_name} and retrying"
+        )
+
+        sqlite_dtype = PYTHON_TO_SQLITE_DTYPE_MAPPING.get(column_dtype, "TEXT")
+        # Add the missing column to the database and try to insert the new bets again
+        db.add_columns(column_name, sqlite_dtype)
+        db.insert_data(new_bets)
 
 
 def get_flag_by_name(name):
@@ -236,7 +295,7 @@ def get_flag_by_name(name):
     return "🇪🇺"
 
 
-def format_messages(best_bets_df, base_message, time_zone):
+def format_messages(best_bets_df, base_message, time_zone, sport_emoji):
     messages_to_send = []
     for i, df in best_bets_df.groupby(["bookmaker_event_id", "market_and_bet_type"]):
         cur_msg = base_message
@@ -259,6 +318,7 @@ def format_messages(best_bets_df, base_message, time_zone):
         messages_to_send.append(
             cur_msg.format(
                 league_name=f"{flag} {league_name}",
+                sport_emoji=sport_emoji,
                 event_name=bet_group[0]["event_name"],
                 bets="\n\t".join([f"- {bet['bet_info']} (1u)" for bet in bet_group]),
                 min_odds=" & ".join(
@@ -278,7 +338,6 @@ def send_message(token, chat_id, message):
     params = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
     response = make_request(url, params=params, method="POST")
 
-    print(response.text)
     return response.json()
 
 
